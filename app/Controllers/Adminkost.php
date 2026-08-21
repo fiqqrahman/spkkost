@@ -123,6 +123,7 @@ class Adminkost extends BaseController
         }
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Kost berhasil didaftarkan.');
     }
+
     public function toggleStatus(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');
@@ -137,6 +138,7 @@ class Adminkost extends BaseController
         }
         return redirect()->to(base_url('/owner/dashboard'));
     }
+    
     public function update(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');

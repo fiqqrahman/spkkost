@@ -14,6 +14,7 @@ class Adminkost extends BaseController
         $this->db        = \Config\Database::connect();
         $this->kostModel = new KostModel();
     }
+
     public function index(): string
     {
         $userId  = (int)session()->get('user_id');
@@ -47,6 +48,7 @@ class Adminkost extends BaseController
             'myKosts' => $myKosts
         ]);
     }
+
     public function save(): \CodeIgniter\HTTP\RedirectResponse
     {
         $rules = [
@@ -138,7 +140,7 @@ class Adminkost extends BaseController
         }
         return redirect()->to(base_url('/owner/dashboard'));
     }
-    
+
     public function update(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');
@@ -241,6 +243,7 @@ class Adminkost extends BaseController
 
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Data properti kost berhasil diperbarui.');
     }
+
     public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');

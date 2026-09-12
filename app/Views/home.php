@@ -203,7 +203,11 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
         const kostLocations = <?= json_encode($results) ?>;
         if (campusInfo && campusInfo.latitude && campusInfo.longitude) {
             const map = L.map('map').setView([campusInfo.latitude, campusInfo.longitude], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
 
             const campusCustomIcon = L.divIcon({
                 html: `<div class="flex items-center justify-center w-8 h-8 bg-rose-600 rounded-full shadow border-2 border-white text-white transform -translate-x-1/2 -translate-y-1/2"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>`,

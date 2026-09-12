@@ -325,8 +325,9 @@
         const initialLat = -2.22623400;
         const initialLng = 113.92423100;
         const map = L.map('map-picker').setView([initialLat, initialLng], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
         setTimeout(() => {
             map.invalidateSize();

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <?php
 $campuses          = $campuses ?? [];
 $results           = $results ?? [];
@@ -46,19 +45,50 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
-                <a href="<?= base_url('/login') ?>" class="text-xs font-semibold text-slate-700 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 px-4 py-2 rounded-lg transition">
-                    Portal Pemilik Kost
-                </a>
+            <div class="flex items-center gap-3">
+                <?php if (session()->get('is_logged_in')): ?>
+                    <div class="hidden sm:flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="text-slate-700 font-semibold"><?= esc(session()->get('username')) ?></span>
+                        <span class="text-slate-400 font-normal">(<?= esc(session()->get('role')) ?>)</span>
+                    </div>
+                    <?php if (session()->get('role') === 'tenant'): ?>
+                        <a href="<?= base_url('/tenant/dashboard') ?>" class="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3.5 py-2 rounded-lg transition">
+                            Dashboard Saya
+                        </a>
+                    <?php else: ?>
+                        <a href="<?= base_url('/owner/dashboard') ?>" class="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3.5 py-2 rounded-lg transition">
+                            Dashboard Pemilik
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?= base_url('/logout') ?>" class="text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3.5 py-2 rounded-lg transition">
+                        Keluar
+                    </a>
+                <?php else: ?>
+                    <a href="<?= base_url('/login') ?>" class="text-xs font-semibold text-slate-700 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 px-4 py-2 rounded-lg transition">
+                        Masuk / Daftar
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </header>
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
+        <?php if (session()->getFlashdata('success')): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm p-4 rounded-xl font-medium flex items-center gap-2">
+                <span>✓</span> <?= session()->getFlashdata('success') ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="bg-rose-50 border border-rose-200 text-rose-800 text-sm p-4 rounded-xl font-medium flex items-center gap-2">
+                <span>⚠</span> <?= session()->getFlashdata('error') ?>
+            </div>
+        <?php endif; ?>
+
         <section class="relative bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-2xl p-8 sm:p-10 shadow-sm overflow-hidden border border-indigo-950">
             <div class="absolute right-0 top-0 bottom-0 w-1/3 bg-indigo-500/10 pointer-events-none transform skew-x-12"></div>
-
             <div class="relative z-10 max-w-2xl space-y-3">
                 <span class="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 text-xs font-semibold px-3 py-1 rounded-full">
                     Sistem Pendukung Keputusan
@@ -73,7 +103,6 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
         </section>
 
         <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
-            <!-- Section Header inside Card -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                     <h2 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -135,7 +164,8 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                             <th class="px-6 py-3.5">Informasi Kost & Fasilitas</th>
                             <th class="px-6 py-3.5 text-right w-40">Sewa / Bulan</th>
                             <th class="px-6 py-3.5 text-center w-36">Jarak Kampus</th>
-                            <th class="px-6 py-3.5 text-center w-32 bg-indigo-50/40 text-indigo-900 font-bold border-l border-slate-200">Skor</th>
+                            <th class="px-6 py-3.5 text-center w-28 bg-indigo-50/40 text-indigo-900 font-bold border-l border-slate-200">Skor</th>
+                            <th class="px-6 py-3.5 text-center w-36">Aksi Pemesanan</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 text-sm">
@@ -162,7 +192,7 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                                         <div class="flex flex-wrap gap-1.5 mt-2">
                                             <?php if (!empty($row['features'])): ?>
                                                 <?php foreach ($row['features'] as $feature): ?>
-                                                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] px-2 py-0.5 rounded font-medium">✓ <?= esc($feature) ?></span>
+                                                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] px-2 py-0.5 rounded font-medium"><?= esc($feature) ?></span>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
                                                 <span class="text-slate-400 text-xs italic">Tanpa data fasilitas</span>
@@ -178,12 +208,25 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                                     <td class="px-6 py-4 text-center font-bold bg-indigo-50/20 text-indigo-700 text-base border-l border-slate-200">
                                         <?= $row['final_score'] ?>
                                     </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <?php if ($row['is_full'] == 1): ?>
+                                            <button disabled class="bg-slate-200 text-slate-500 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-not-allowed">
+                                                Kamar Penuh
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button"
+                                                onclick='openBookingModal(<?= json_encode($row) ?>)'
+                                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
+                                                Ajukan Sewa
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php $rank++;
                             endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic">Data kost tidak ditemukan.</td>
+                                <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">Data kost tidak ditemukan.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -191,6 +234,55 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
             </div>
         </section>
     </main>
+
+    <!-- Modal Booking Sewa -->
+    <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-xl space-y-4 my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                        Formulir Pengajuan Sewa Unit
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5" id="modal-kost-title">Nama Kost Target</p>
+                </div>
+                <button type="button" onclick="closeBookingModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2 py-1 cursor-pointer">&times;</button>
+            </div>
+
+            <form action="<?= base_url('/booking/submit') ?>" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <?= csrf_field() ?>
+                <input type="hidden" id="booking_kost_id" name="kost_id" required>
+
+                <div>
+                    <label for="occupant_count" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Jumlah Penghuni (Orang)</label>
+                    <input type="number" id="occupant_count" name="occupant_count" value="1" min="1" max="5" required
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
+                </div>
+
+                <div>
+                    <label for="campus_name" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Asal Perguruan Tinggi / Instansi</label>
+                    <input type="text" id="campus_name" name="campus_name" required placeholder="Contoh: Universitas Palangka Raya (UPR)"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
+                </div>
+
+                <div>
+                    <label for="identity_doc" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Unggah Identitas Diri (KTP / KTM)</label>
+                    <input type="file" name="identity_doc" id="identity_doc" accept="image/*,.pdf" required
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-slate-700 text-xs focus:outline-none transition">
+                    <p class="text-[10px] text-slate-400 mt-1">* Format diizinkan: JPG, PNG, WEBP, atau PDF (Maks 2MB).</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeBookingModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-xs cursor-pointer">
+                        Kirim Pengajuan Booking
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
@@ -201,6 +293,7 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
     <script>
         const campusInfo = <?= json_encode($currentCampus) ?>;
         const kostLocations = <?= json_encode($results) ?>;
+
         if (campusInfo && campusInfo.latitude && campusInfo.longitude) {
             const map = L.map('map').setView([campusInfo.latitude, campusInfo.longitude], 14);
 
@@ -215,6 +308,7 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                 iconSize: [32, 32],
                 iconAnchor: [16, 16]
             });
+
             L.marker([campusInfo.latitude, campusInfo.longitude], {
                     icon: campusCustomIcon
                 })
@@ -231,9 +325,11 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                             iconSize: [28, 28],
                             iconAnchor: [14, 14]
                         });
+
                         const marker = L.marker([kost.latitude, kost.longitude], {
                             icon: kostCustomIcon
                         }).addTo(map);
+
                         let photoList = [];
                         if (kost.images) {
                             photoList = Array.isArray(kost.images) ? kost.images : JSON.parse(kost.images);
@@ -263,6 +359,16 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                     }
                 });
             }
+        }
+
+        function openBookingModal(kost) {
+            document.getElementById('booking_kost_id').value = kost.id || '';
+            document.getElementById('modal-kost-title').innerText = 'Mengajukan sewa untuk unit: ' + kost.name;
+            document.getElementById('bookingModal').classList.remove('hidden');
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').classList.add('hidden');
         }
     </script>
 </body>

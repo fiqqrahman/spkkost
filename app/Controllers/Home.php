@@ -105,6 +105,7 @@ class Home extends BaseController
                 $totalScore += $normalized * $weight;
             }
             $finalRankings[] = [
+                'id'          => $alt['id'], // <-- Tambahkan baris ini
                 'name'        => $alt['name'],
                 'price'       => $alt['price'],
                 'distance'    => round($alt['distance'], 2),

@@ -248,30 +248,27 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                 </div>
                 <button type="button" onclick="closeBookingModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2 py-1 cursor-pointer">&times;</button>
             </div>
-
             <form action="<?= base_url('/booking/submit') ?>" method="POST" enctype="multipart/form-data" class="space-y-4">
                 <?= csrf_field() ?>
-                <input type="hidden" id="booking_kost_id" name="kost_id" required>
+                <!-- Pastikan ID berikut sinkron dengan JavaScript -->
+                <input type="hidden" id="booking_kost_id" name="kost_id" value="" required>
 
                 <div>
                     <label for="occupant_count" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Jumlah Penghuni (Orang)</label>
                     <input type="number" id="occupant_count" name="occupant_count" value="1" min="1" max="5" required
                         class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
                 </div>
-
                 <div>
                     <label for="campus_name" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Asal Perguruan Tinggi / Instansi</label>
                     <input type="text" id="campus_name" name="campus_name" required placeholder="Contoh: Universitas Palangka Raya (UPR)"
                         class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
                 </div>
-
                 <div>
                     <label for="identity_doc" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Unggah Identitas Diri (KTP / KTM)</label>
                     <input type="file" name="identity_doc" id="identity_doc" accept="image/*,.pdf" required
                         class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-slate-700 text-xs focus:outline-none transition">
                     <p class="text-[10px] text-slate-400 mt-1">* Format diizinkan: JPG, PNG, WEBP, atau PDF (Maks 2MB).</p>
                 </div>
-
                 <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeBookingModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg transition cursor-pointer">
                         Batal
@@ -362,9 +359,15 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
         }
 
         function openBookingModal(kost) {
-            document.getElementById('booking_kost_id').value = kost.id || '';
-            document.getElementById('modal-kost-title').innerText = 'Mengajukan sewa untuk unit: ' + kost.name;
-            document.getElementById('bookingModal').classList.remove('hidden');
+            const inputKostId = document.getElementById('booking_kost_id');
+            const titleElement = document.getElementById('modal-kost-title');
+
+            if (inputKostId && kost) {
+                // Ambil kost.id yang sekarang sudah dikirim dari controller
+                inputKostId.value = kost.id || '';
+                titleElement.innerText = 'Mengajukan sewa untuk unit: ' + (kost.name || '');
+                document.getElementById('bookingModal').classList.remove('hidden');
+            }
         }
 
         function closeBookingModal() {

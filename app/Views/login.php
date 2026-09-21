@@ -41,7 +41,7 @@
                         SELAMAT DATANG
                     </h1>
                     <p class="text-indigo-100/80 text-xs leading-relaxed font-normal">
-                        Masuk untuk mengelola properti kost milik antum atau memantau pengajuan sewa & pembayaran kamar.
+                        Masuk untuk mengelola properti kost milik anda atau memantau pengajuan sewa & pembayaran kamar.
                     </p>
                 </div>
 

@@ -41,7 +41,7 @@
                         BUAT AKUN PENCARI KOST
                     </h1>
                     <p class="text-indigo-100/80 text-xs leading-relaxed font-normal">
-                        Daftarkan diri antum untuk bisa mengajukan sewa kost dan melakukan verifikasi pembayaran bulanan secara transparan.
+                        Registrasi terlebih dahulu untuk bisa mengajukan sewa kost dan melakukan verifikasi pembayaran bulanan.
                     </p>
                 </div>
 

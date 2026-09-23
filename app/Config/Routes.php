@@ -24,13 +24,14 @@ $routes->post('auth/register', 'Auth::attemptRegister');
 $routes->get('tenant/dashboard', 'Tenant::index');
 $routes->post('booking/submit', 'Booking::submit');
 $routes->post('tenant/payment/upload', 'Tenant::uploadPayment');
+$routes->post('tenant/termination/request', 'Tenant::requestTermination');
 
 // ==========================================
 // 3. OWNER (PEMILIK KOST) ROUTES GROUP
 // ==========================================
 $routes->group('owner', ['filter' => 'auth_satpam'], static function (RouteCollection $routes): void {
 
-    // Halaman utama & Dashboard Owner
+    // Halaman Utama & Dashboard Owner
     $routes->get('/', 'Adminkost::index');
     $routes->get('dashboard', 'Adminkost::index');
 
@@ -44,4 +45,7 @@ $routes->group('owner', ['filter' => 'auth_satpam'], static function (RouteColle
     $routes->get('booking/handle/(:num)/(:segment)', 'Adminkost::handleBooking/$1/$2');
     $routes->post('booking/handle/(:num)/reject', 'Adminkost::handleBooking/$1/reject');
     $routes->get('payment/handle/(:num)/(:segment)', 'Adminkost::handlePayment/$1/$2');
+
+    // Pengurusan Berhenti Sewa (Termination)
+    $routes->get('booking/termination/(:num)/(:segment)', 'Adminkost::handleTermination/$1/$2');
 });

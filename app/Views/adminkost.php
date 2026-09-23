@@ -292,11 +292,26 @@ $incomingBookings = $incomingBookings ?? [];
                                             Tolak
                                         </button>
                                     <?php elseif ($b['status'] === 'approved'): ?>
-                                        <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Disetujui</span>
+                                        <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Disetujui / Aktif</span>
+                                    <?php elseif ($b['status'] === 'termination_requested'): ?>
+                                        <a href="<?= base_url('/owner/booking/termination/' . $b['id'] . '/approve') ?>" onclick="return confirm('Apakah Antum yakin ingin menyetujui pengajuan berhenti sewa ini?')" class="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition">
+                                            Setujui Berhenti
+                                        </a>
+                                        <a href="<?= base_url('/owner/booking/termination/' . $b['id'] . '/reject') ?>" class="text-xs font-semibold text-white bg-slate-600 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition">
+                                            Tolak Berhenti
+                                        </a>
+                                    <?php elseif ($b['status'] === 'terminated'): ?>
+                                        <span class="bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1 rounded-full text-xs font-bold">Sewa Selesai</span>
                                     <?php else: ?>
                                         <span class="bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1 rounded-full text-xs font-bold">Ditolak</span>
                                     <?php endif; ?>
                                 </div>
+
+                                <?php if (!empty($b['termination_reason'])): ?>
+                                    <div class="mt-2 bg-purple-50 border border-purple-200 text-purple-900 text-xs p-3 rounded-lg">
+                                        <b>Alasan Pengajuan Berhenti Sewa:</b> <?= esc($b['termination_reason']) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Bukti Pembayaran Penyewa -->

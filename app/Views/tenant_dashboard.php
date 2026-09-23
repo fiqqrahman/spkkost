@@ -102,7 +102,11 @@
                                     <?php if ($b['status'] === 'pending'): ?>
                                         <span class="bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1 rounded-full text-xs font-bold">Menunggu Persetujuan Pemilik</span>
                                     <?php elseif ($b['status'] === 'approved'): ?>
-                                        <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Pengajuan Disetujui</span>
+                                        <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Pengajuan Disetujui (Aktif)</span>
+                                    <?php elseif ($b['status'] === 'termination_requested'): ?>
+                                        <span class="bg-purple-100 text-purple-800 border border-purple-300 px-3 py-1 rounded-full text-xs font-bold">Proses Pengajuan Berhenti Sewa</span>
+                                    <?php elseif ($b['status'] === 'terminated'): ?>
+                                        <span class="bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1 rounded-full text-xs font-bold">Sewa Telah Berakhir</span>
                                     <?php else: ?>
                                         <span class="bg-rose-100 text-rose-800 border border-rose-300 px-3 py-1 rounded-full text-xs font-bold">Pengajuan Ditolak</span>
                                     <?php endif; ?>
@@ -116,13 +120,16 @@
                             <?php endif; ?>
 
                             <?php if ($b['status'] === 'approved'): ?>
-                                <div class="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs">
+                                <div class="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs gap-2">
                                     <span class="text-indigo-900 font-medium">Kamar siap dihuni! Silakan unggah bukti pembayaran awal / DP untuk penguncian unit.</span>
-                                    <button type="button"
-                                        onclick='openPaymentModal(<?= json_encode($b) ?>)'
-                                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
-                                        Bayar / Upload Struk
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick='openPaymentModal(<?= json_encode($b) ?>)' class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
+                                            Bayar / Upload Struk
+                                        </button>
+                                        <button type="button" onclick='openTerminationModal(<?= json_encode($b) ?>)' class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
+                                            Ajukan Berhenti
+                                        </button>
+                                    </div>
                                 </div>
                             <?php endif; ?>
 
@@ -220,6 +227,51 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal Form Terminate/Berhenti Sewa -->
+    <div id="terminationModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-xl space-y-4 my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+                        Pengajuan Berhenti Sewa Kost
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5" id="modal-term-kost-title">Target Unit Kost</p>
+                </div>
+                <button type="button" onclick="closeTerminationModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2 py-1 cursor-pointer">&times;</button>
+            </div>
+            <form action="<?= base_url('/tenant/termination/request') ?>" method="POST" class="space-y-4">
+                <?= csrf_field() ?>
+                <input type="hidden" id="term_booking_id" name="booking_id" required>
+                <div>
+                    <label for="termination_reason" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Alasan Berhenti Sewa</label>
+                    <textarea id="termination_reason" name="termination_reason" rows="3" required placeholder="Contoh: Sudah lulus kuliah / Pindah lokasi kerja"
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition"></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeTerminationModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 rounded-lg transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs cursor-pointer">
+                        Kirim Pengajuan Berhenti
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openTerminationModal(b) {
+            document.getElementById('term_booking_id').value = b.id;
+            document.getElementById('modal-term-kost-title').innerText = 'Unit: ' + b.kost_name;
+            document.getElementById('terminationModal').classList.remove('hidden');
+        }
+
+        function closeTerminationModal() {
+            document.getElementById('terminationModal').classList.add('hidden');
+        }
+    </script>
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">

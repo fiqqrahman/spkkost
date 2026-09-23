@@ -351,6 +351,32 @@ class Adminkost extends BaseController
         return redirect()->back();
     }
 
+    public function handleTermination(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $userId  = (int)session()->get('user_id');
+        $booking = $this->db->table('bookings')
+            ->select('bookings.*')
+            ->join('kosts', 'kosts.id = bookings.kost_id')
+            ->where('bookings.id', $id)
+            ->where('kosts.user_id', $userId)
+            ->get()
+            ->getRowArray();
+
+        if (!$booking) {
+            return redirect()->back()->with('error', 'Akses ditolak atau data pengajuan tidak ditemukan.');
+        }
+
+        if ($action === 'approve') {
+            $this->bookingModel->update($id, ['status' => 'terminated']);
+            return redirect()->back()->with('success', 'Pengajuan berhenti sewa telah disetujui. Unit resmi dikosongkan.');
+        } elseif ($action === 'reject') {
+            $this->bookingModel->update($id, ['status' => 'approved']);
+            return redirect()->back()->with('success', 'Pengajuan berhenti sewa ditolak. Status kembali aktif.');
+        }
+
+        return redirect()->back();
+    }
+
     public function handlePayment(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId  = (int)session()->get('user_id');

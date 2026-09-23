@@ -106,4 +106,36 @@ class Tenant extends BaseController
 
         return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Bukti pembayaran berhasil dikirim. Menunggu verifikasi pemilik kost.');
     }
+
+    public function requestTermination(): \CodeIgniter\HTTP\RedirectResponse
+    {
+        if (!session()->get('is_logged_in') || session()->get('role') !== 'tenant') {
+            return redirect()->to(base_url('/login'))->with('error', 'Akses ditolak.');
+        }
+
+        $rules = [
+            'booking_id'         => 'required|numeric',
+            'termination_reason' => 'required|min_length[5]'
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
+        }
+
+        $userId             = (int)session()->get('user_id');
+        $bookingId          = (int)$this->request->getPost('booking_id');
+        $terminationReason = (string)$this->request->getPost('termination_reason');
+
+        $booking = $this->bookingModel->where('id', $bookingId)->where('user_id', $userId)->first();
+        if (!$booking || $booking['status'] !== 'approved') {
+            return redirect()->back()->with('error', 'Pengajuan berhenti sewa hanya dapat dilakukan untuk hunian aktif.');
+        }
+
+        $this->bookingModel->update($bookingId, [
+            'status'             => 'termination_requested',
+            'termination_reason' => $terminationReason
+        ]);
+
+        return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Pengajuan berhenti sewa berhasil dikirimkan. Menunggu konfirmasi pemilik kost.');
+    }
 }

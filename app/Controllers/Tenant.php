@@ -26,11 +26,12 @@ class Tenant extends BaseController
 
         $userId = (int)session()->get('user_id');
 
-        // Ambil booking milik tenant beserta detail kost
+        // [!] Ambil booking milik tenant yang HANYA AKTIF / BERJALAN (Abaikan status 'terminated' & 'rejected')
         $myBookings = $this->db->table('bookings')
             ->select('bookings.*, kosts.name as kost_name, kosts.price as kost_price, kosts.image as kost_image')
             ->join('kosts', 'kosts.id = bookings.kost_id')
             ->where('bookings.user_id', $userId)
+            ->whereNotIn('bookings.status', ['terminated', 'rejected']) // <-- Filter presisi data residu
             ->orderBy('bookings.id', 'DESC')
             ->get()
             ->getResultArray();

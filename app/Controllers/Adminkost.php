@@ -57,6 +57,7 @@ class Adminkost extends BaseController
                 ->join('kosts', 'kosts.id = bookings.kost_id')
                 ->join('users', 'users.id = bookings.user_id')
                 ->whereIn('bookings.kost_id', $kostIds)
+                ->whereNotIn('bookings.status', ['terminated', 'rejected']) // <-- Filter presisi data residu
                 ->orderBy('bookings.id', 'DESC')
                 ->get()
                 ->getResultArray();

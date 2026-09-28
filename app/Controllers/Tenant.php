@@ -31,7 +31,7 @@ class Tenant extends BaseController
             ->select('bookings.*, kosts.name as kost_name, kosts.price as kost_price, kosts.image as kost_image')
             ->join('kosts', 'kosts.id = bookings.kost_id')
             ->where('bookings.user_id', $userId)
-            ->whereNotIn('bookings.status', ['terminated', 'rejected']) // <-- Filter presisi data residu
+            ->whereNotIn('bookings.status', ['terminated', 'rejected'])
             ->orderBy('bookings.id', 'DESC')
             ->get()
             ->getResultArray();

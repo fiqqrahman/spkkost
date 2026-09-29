@@ -256,7 +256,7 @@ $incomingBookings = $incomingBookings ?? [];
         <section class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Pengajuan Sewa & Verifikasi Pembayaran</h2>
+                    <h2 class="text-base font-bold text-slate-900 tracking-tight">Pengajuan Sewa & Pembayaran</h2>
                     <p class="text-xs text-slate-500">Tinjau calon penyewa dan konfirmasi transaksi masuk</p>
                 </div>
                 <span class="text-xs font-semibold bg-white border border-slate-200 px-3 py-1 rounded-full text-slate-600">
@@ -272,7 +272,7 @@ $incomingBookings = $incomingBookings ?? [];
                                 <div>
                                     <h3 class="text-base font-bold text-slate-900"><?= esc($b['tenant_name']) ?> <span class="text-xs font-normal text-slate-500">(<?= esc($b['tenant_email']) ?>)</span></h3>
                                     <p class="text-xs text-slate-500">
-                                        Mengajukan sewa: <b class="text-slate-800"><?= esc($b['kost_name']) ?></b> |
+                                        Nama Kost: <b class="text-slate-800"><?= esc($b['kost_name']) ?></b> |
                                         Instansi: <span class="text-slate-700"><?= esc($b['campus_name']) ?></span> (<?= $b['occupant_count'] ?> Orang)
                                     </p>
                                 </div>

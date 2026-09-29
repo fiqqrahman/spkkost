@@ -121,7 +121,7 @@
 
                             <?php if ($b['status'] === 'approved'): ?>
                                 <div class="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 p-3 rounded-lg text-xs gap-2">
-                                    <span class="text-indigo-900 font-medium">Kamar siap dihuni! Silakan unggah bukti pembayaran awal / DP untuk penguncian unit.</span>
+                                    <span class="text-indigo-900 font-medium">Kamar siap dihuni! Silakan unggah bukti pembayaran awal dan selalu laporkan tagihan bayar untuk periode-periode selanjutnya.</span>
                                     <div class="flex items-center gap-2">
                                         <button type="button" onclick='openPaymentModal(<?= json_encode($b) ?>)' class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
                                             Bayar / Upload Struk

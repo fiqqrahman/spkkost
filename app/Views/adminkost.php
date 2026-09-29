@@ -359,19 +359,27 @@
             document.getElementById('edit_price').value = kost.price;
             document.getElementById('edit_latitude').value = kost.latitude;
             document.getElementById('edit_longitude').value = kost.longitude;
+
             const selectedFeatures = kost.selected_features || [];
             document.querySelectorAll('.edit-feature-cb').forEach(cb => {
                 cb.checked = selectedFeatures.includes(parseInt(cb.value));
             });
+
+            // Tampilkan modal dulu
             document.getElementById('editModal').classList.remove('hidden');
+
             const lat = parseFloat(kost.latitude) || initialLat;
             const lng = parseFloat(kost.longitude) || initialLng;
 
+            // Beri jeda agar DOM modal dirender sempurna sebelum Leaflet dipanggil
             setTimeout(() => {
                 if (!editMap) {
                     editMap = L.map('map-picker-edit').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap'
+
+                    // DISAMAKAN: Menggunakan Tile Server OSM France agar tidak kena 403 Blocked
+                    L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     }).addTo(editMap);
 
                     editMarker = L.marker([lat, lng]).addTo(editMap);
@@ -387,8 +395,14 @@
                     editMap.setView([lat, lng], 15);
                     editMarker.setLatLng([lat, lng]);
                 }
+
+                // Paksa re-kalkulasi ukuran container modal
                 editMap.invalidateSize();
-            }, 200);
+            }, 300);
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
         }
 
         function closeEditModal() {

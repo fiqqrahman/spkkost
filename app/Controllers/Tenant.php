@@ -7,10 +7,16 @@ use App\Models\PaymentModel;
 
 class Tenant extends BaseController
 {
+    // Koneksi database utama
     protected \CodeIgniter\Database\BaseConnection $db;
+
+    // Instance model untuk entitas pemesanan
     private BookingModel $bookingModel;
+
+    // Instance model untuk entitas pembayaran
     private PaymentModel $paymentModel;
 
+    // Konstruktor controller untuk menginisialisasi model dan koneksi database
     public function __construct()
     {
         $this->db           = \Config\Database::connect();
@@ -18,14 +24,18 @@ class Tenant extends BaseController
         $this->paymentModel = new PaymentModel();
     }
 
+    // Menampilkan halaman dashboard utama untuk penyewa kost
     public function index(): \CodeIgniter\HTTP\RedirectResponse|string
     {
+        // Validasi hak akses session penyewa kost
         if (!session()->get('is_logged_in') || session()->get('role') !== 'tenant') {
             return redirect()->to(base_url('/login'))->with('error', 'Akses khusus penyewa kost.');
         }
 
+        // Ambil ID user dari session aktif
         $userId = (int)session()->get('user_id');
 
+        // Ambil daftar booking aktif milik penyewa
         $myBookings = $this->db->table('bookings')
             ->select('bookings.*, kosts.name as kost_name, kosts.price as kost_price, kosts.image as kost_image')
             ->join('kosts', 'kosts.id = bookings.kost_id')
@@ -45,17 +55,21 @@ class Tenant extends BaseController
         }
         unset($b);
 
+        // Rendisi view dashboard penyewa membawa data pemesanan
         return view('tenant_dashboard', [
             'myBookings' => $myBookings
         ]);
     }
 
+    // Mengunggah berkas bukti pembayaran sewa/DP
     public function uploadPayment(): \CodeIgniter\HTTP\RedirectResponse
     {
+        // Pengecekan otorisasi session penyewa
         if (!session()->get('is_logged_in') || session()->get('role') !== 'tenant') {
             return redirect()->to(base_url('/login'))->with('error', 'Akses ditolak.');
         }
 
+        // Aturan validasi input formulir pembayaran
         $rules = [
             'booking_id'  => 'required|numeric',
             'amount'      => 'required|numeric|greater_than[0]',
@@ -73,19 +87,23 @@ class Tenant extends BaseController
             ]
         ];
 
+        // Jalankan validasi input formulir
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
         }
 
+        // Tangkap data dari request POST
         $userId    = (int)session()->get('user_id');
         $bookingId = (int)$this->request->getPost('booking_id');
         $amount    = (float)$this->request->getPost('amount');
 
+        // Tangkap data dari request POST
         $booking = $this->bookingModel->where('id', $bookingId)->where('user_id', $userId)->first();
         if (!$booking || $booking['status'] !== 'approved') {
             return redirect()->back()->with('error', 'Transaksi pembayaran tidak valid atau booking belum disetujui.');
         }
 
+        // Memproses pengungahan file bukti bayar
         $file = $this->request->getFile('proof_image');
         $fileName = '';
         if ($file && $file->isValid() && !$file->hasMoved()) {
@@ -95,6 +113,7 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Gagal memproses berkas gambar.');
         }
 
+        // Simpan data pembayaran ke database
         $this->paymentModel->insert([
             'booking_id'   => $bookingId,
             'amount'       => $amount,
@@ -106,30 +125,37 @@ class Tenant extends BaseController
         return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Bukti pembayaran berhasil dikirim. Menunggu verifikasi pemilik kost.');
     }
 
+    // Mengajukan penghentian sewa unit kost
     public function requestTermination(): \CodeIgniter\HTTP\RedirectResponse
     {
+        // Pengecekan otorisasi session penyewa
         if (!session()->get('is_logged_in') || session()->get('role') !== 'tenant') {
             return redirect()->to(base_url('/login'))->with('error', 'Akses ditolak.');
         }
 
+        // Aturan validasi pengajuan berhenti sewa
         $rules = [
             'booking_id'         => 'required|numeric',
             'termination_reason' => 'required|min_length[5]'
         ];
 
+        // Jalankan validasi input
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
         }
 
+        // Tangkap data input dari POST request
         $userId             = (int)session()->get('user_id');
         $bookingId          = (int)$this->request->getPost('booking_id');
         $terminationReason = (string)$this->request->getPost('termination_reason');
 
+        // Validasi keberadaan hunian aktif
         $booking = $this->bookingModel->where('id', $bookingId)->where('user_id', $userId)->first();
         if (!$booking || $booking['status'] !== 'approved') {
             return redirect()->back()->with('error', 'Pengajuan berhenti sewa hanya dapat dilakukan untuk hunian aktif.');
         }
 
+        // Perbarui status pemesanan ke pengajuan berhenti sewa
         $this->bookingModel->update($bookingId, [
             'status'             => 'termination_requested',
             'termination_reason' => $terminationReason

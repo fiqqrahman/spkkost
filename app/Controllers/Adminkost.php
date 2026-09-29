@@ -171,9 +171,11 @@ class Adminkost extends BaseController
             'image'     => !empty($uploadedImages) ? json_encode($uploadedImages) : null
         ];
 
+        // Insert record kost utama
         $this->kostModel->insert($kostData);
         $kostId = $this->kostModel->getInsertID();
 
+        // Simpan data pemetaan fasilitas jika dipilih
         if (!empty($features) && is_array($features)) {
             $builder   = $this->db->table('kost_features');
             $batchData = [];
@@ -186,21 +188,28 @@ class Adminkost extends BaseController
             $builder->insertBatch($batchData);
         }
 
+        // Selesaikan transaksi database
         $this->db->transComplete();
 
+        // Evaluasi keberhasilan transaksi database
         if ($this->db->transStatus() === false) {
-            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan internal saat menyimpan data.');
+            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan saat menyimpan data.');
         }
 
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Kost berhasil didaftarkan.');
     }
 
+    // Mengubah status ketersediaan kamar kost (Penuh / Tersedia)
     public function toggleStatus(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');
+
+        // Validasi kepemilikan aset kost
         $kost   = $this->kostModel->where('id', $id)->where('user_id', $userId)->first();
 
         if ($kost) {
+
+            // Balikkan status ketersedian kost
             $newStatus = ((int)$kost['is_full'] === 1) ? 0 : 1;
             $this->kostModel->update($id, ['is_full' => $newStatus]);
         } else {
@@ -210,15 +219,19 @@ class Adminkost extends BaseController
         return redirect()->to(base_url('/owner/dashboard'));
     }
 
+    // Memperbarui data properti kost yang sudah ada
     public function update(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');
+
+        // Pastikan properti memang milik user yang sedang login
         $kost   = $this->kostModel->where('id', $id)->where('user_id', $userId)->first();
 
         if (!$kost) {
             return redirect()->to(base_url('/owner/dashboard'))->with('error', 'Akses ilegal! Properti tidak ditemukan.');
         }
 
+        // Aturan validasi pembaruan data
         $rules = [
             'name'      => 'required|min_length[3]|max_length[150]',
             'price'     => 'required|numeric|greater_than_equal_to[0]',
@@ -238,6 +251,7 @@ class Adminkost extends BaseController
             ]
         ];
 
+        // Jalankan validasi input
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
         }
@@ -251,6 +265,7 @@ class Adminkost extends BaseController
         $imageFiles     = $this->request->getFileMultiple('images');
         $hasNewImages   = false;
 
+        // Memproses berkas gambar baru jika diunggah
         if ($imageFiles) {
             $allowedMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
             foreach ($imageFiles as $file) {
@@ -266,6 +281,7 @@ class Adminkost extends BaseController
             }
         }
 
+        // Hapus file gambar lama jika ada unggahan baru
         if ($hasNewImages && !empty($kost['image'])) {
             $oldImages = json_decode($kost['image'], true);
             if (is_array($oldImages)) {
@@ -278,6 +294,7 @@ class Adminkost extends BaseController
             }
         }
 
+        // Mulai transaksi database untuk pembaruan
         $this->db->transStart();
 
         $updateData = [
@@ -291,10 +308,13 @@ class Adminkost extends BaseController
             $updateData['image'] = json_encode($uploadedImages);
         }
 
+        // Perbarui data utama kost
         $this->kostModel->update($id, $updateData);
 
+        // Hapus fasilitas lama sebelum memperbarui relasi fasilitas
         $this->db->table('kost_features')->where('kost_id', $id)->delete();
 
+        // Sisipkan kembali relasi fasilitas jika diupdate
         if (!empty($features) && is_array($features)) {
             $builder   = $this->db->table('kost_features');
             $batchData = [];
@@ -307,8 +327,10 @@ class Adminkost extends BaseController
             $builder->insertBatch($batchData);
         }
 
+        // Selesaikan transaksi database
         $this->db->transComplete();
 
+        // Validasi status transaksi
         if ($this->db->transStatus() === false) {
             return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan saat memperbarui data.');
         }
@@ -316,15 +338,19 @@ class Adminkost extends BaseController
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Data properti kost berhasil diperbarui.');
     }
 
+    // Menghapus data kost beserta seluruh file fisik gambarnya
     public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId = (int)session()->get('user_id');
+
+        // Pastikan hak akses pemilik kost 
         $kost   = $this->kostModel->where('id', $id)->where('user_id', $userId)->first();
 
         if (!$kost) {
             return redirect()->to(base_url('/owner/dashboard'))->with('error', 'Akses ilegal! Properti tidak ditemukan.');
         }
 
+        // Hapus file fisik gambar dari direktori server
         if (!empty($kost['image'])) {
             $imagesArray = json_decode($kost['image'], true);
             if (is_array($imagesArray)) {
@@ -337,6 +363,7 @@ class Adminkost extends BaseController
             }
         }
 
+        // Jalankan transaksi penghapusan di DB
         $this->db->transStart();
         $this->db->table('kost_features')->where('kost_id', $id)->delete();
         $this->kostModel->delete($id);
@@ -349,10 +376,12 @@ class Adminkost extends BaseController
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Aset kost berhasil dihapus.');
     }
 
-
+    // Memproses persetujuan atau penolakan pengajuan sewa (Booking)
     public function handleBooking(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId  = (int)session()->get('user_id');
+
+        // Verifikasi keberadaan booking dan hak akses owner
         $booking = $this->db->table('bookings')
             ->select('bookings.*')
             ->join('kosts', 'kosts.id = bookings.kost_id')
@@ -365,6 +394,7 @@ class Adminkost extends BaseController
             return redirect()->back()->with('error', 'Akses ditolak atau data pengajuan tidak ditemukan.');
         }
 
+        // Proses aksi persetujuan atau penolakan
         if ($action === 'approve') {
             $this->bookingModel->update($id, ['status' => 'approved']);
             return redirect()->back()->with('success', 'Pengajuan sewa telah disetujui.');
@@ -380,9 +410,12 @@ class Adminkost extends BaseController
         return redirect()->back();
     }
 
+    // Memproses pengajuan penghentian/terminasi sewa oleh penyewa
     public function handleTermination(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId  = (int)session()->get('user_id');
+
+        // Verifikasi kepemilikan dan hak akses owener yang sesuai atas transaksi terminasi
         $booking = $this->db->table('bookings')
             ->select('bookings.*')
             ->join('kosts', 'kosts.id = bookings.kost_id')
@@ -395,6 +428,7 @@ class Adminkost extends BaseController
             return redirect()->back()->with('error', 'Akses ditolak atau data pengajuan tidak ditemukan.');
         }
 
+        // Setujui atau tolak terminasi penyewaan
         if ($action === 'approve') {
             $this->bookingModel->update($id, ['status' => 'terminated']);
             return redirect()->back()->with('success', 'Pengajuan berhenti sewa telah disetujui. Unit resmi dikosongkan.');
@@ -406,9 +440,12 @@ class Adminkost extends BaseController
         return redirect()->back();
     }
 
+    // Melakukan verifikasi transaksi pembayaran dari penyewa
     public function handlePayment(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
     {
         $userId  = (int)session()->get('user_id');
+
+        // Verifikasi hak akses dan data pembayaran yang terhubung dengan unit milik owner
         $payment = $this->db->table('payments')
             ->select('payments.*')
             ->join('bookings', 'bookings.id = payments.booking_id')
@@ -422,6 +459,7 @@ class Adminkost extends BaseController
             return redirect()->back()->with('error', 'Akses ditolak atau transaksi tidak ditemukan.');
         }
 
+        // Perbarui status verifikasi pembayaran
         $newStatus = ($action === 'verify') ? 'verified' : 'rejected';
         $this->paymentModel->update($id, ['status' => $newStatus]);
 

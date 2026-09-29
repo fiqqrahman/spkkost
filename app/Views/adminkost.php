@@ -519,48 +519,65 @@ $incomingBookings = $incomingBookings ?? [];
         let editMarker = null;
 
         function openEditModal(kost) {
+            // 1. Isikan data properti ke input form
             document.getElementById('editForm').action = '<?= base_url('/owner/update/') ?>' + kost.id;
             document.getElementById('edit_name').value = kost.name;
             document.getElementById('edit_price').value = kost.price;
             document.getElementById('edit_latitude').value = kost.latitude;
             document.getElementById('edit_longitude').value = kost.longitude;
 
+            // 2. Centang checkbox fasilitas
             const selectedFeatures = kost.selected_features || [];
             document.querySelectorAll('.edit-feature-cb').forEach(cb => {
                 cb.checked = selectedFeatures.includes(parseInt(cb.value));
             });
 
+            // 3. Tampilkan modal terlebih dahulu agar DOM berelemen aktif
             document.getElementById('editModal').classList.remove('hidden');
 
             const lat = parseFloat(kost.latitude) || initialLat;
             const lng = parseFloat(kost.longitude) || initialLng;
 
+            // 4. Gunakan requestAnimationFrame / setTimeout 300ms agar CSS transition selesai
             setTimeout(() => {
-                if (!editMap) {
-                    editMap = L.map('map-picker-edit').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.fr/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap'
-                    }).addTo(editMap);
-
-                    editMarker = L.marker([lat, lng]).addTo(editMap);
-
-                    editMap.on('click', function(e) {
-                        const newLat = e.latlng.lat;
-                        const newLng = e.latlng.lng;
-                        editMarker.setLatLng(e.latlng);
-                        document.getElementById('edit_latitude').value = newLat.toFixed(8);
-                        document.getElementById('edit_longitude').value = newLng.toFixed(8);
-                    });
-                } else {
-                    editMap.setView([lat, lng], 15);
-                    editMarker.setLatLng([lat, lng]);
+                if (editMap !== null) {
+                    editMap.remove(); // Hancurkan instance peta lama agar tidak crash/stuck
+                    editMap = null;
                 }
+
+                // Inisialisasi ulang Leaflet Map pada kontainer modal
+                editMap = L.map('map-picker-edit').setView([lat, lng], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(editMap);
+
+                // Tambahkan marker titik lokasi awal
+                editMarker = L.marker([lat, lng]).addTo(editMap);
+                editMarker.bindPopup('<b class="text-slate-900 text-xs">Lokasi Kost Saat Ini</b>').openPopup();
+
+                // Pemicu Klik untuk Mengubah Titik Koordinat Baru
+                editMap.on('click', function(e) {
+                    const newLat = e.latlng.lat;
+                    const newLng = e.latlng.lng;
+
+                    editMarker.setLatLng(e.latlng);
+                    document.getElementById('edit_latitude').value = newLat.toFixed(8);
+                    document.getElementById('edit_longitude').value = newLng.toFixed(8);
+                });
+
+                // Paksa Leaflet untuk mengeset ulang ukuran tile peta berdasarkan layar modal
                 editMap.invalidateSize();
-            }, 200);
+            }, 300);
         }
 
         function closeEditModal() {
             document.getElementById('editModal').classList.add('hidden');
+            if (editMap !== null) {
+                editMap.remove();
+                editMap = null;
+            }
         }
 
         function openRejectModal(bookingId) {

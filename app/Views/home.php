@@ -292,30 +292,38 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
         const kostLocations = <?= json_encode($results) ?>;
 
         if (campusInfo && campusInfo.latitude && campusInfo.longitude) {
-            const map = L.map('map').setView([campusInfo.latitude, campusInfo.longitude], 14);
+            // Inisialisasi Peta berdasarkan Koordinat Kampus
+            const map = L.map('map').setView([parseFloat(campusInfo.latitude), parseFloat(campusInfo.longitude)], 14);
 
             L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
 
+            // Icon Marker Kampus
             const campusCustomIcon = L.divIcon({
-                html: `<div class="flex items-center justify-center w-8 h-8 bg-rose-600 rounded-full shadow border-2 border-white text-white transform -translate-x-1/2 -translate-y-1/2"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>`,
+                html: `<div class="flex items-center justify-center w-8 h-8 bg-rose-600 rounded-full shadow border-2 border-white text-white transform -translate-x-1/2 -translate-y-1/2"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div>`,
                 className: 'custom-campus-marker',
                 iconSize: [32, 32],
                 iconAnchor: [16, 16]
             });
 
-            L.marker([campusInfo.latitude, campusInfo.longitude], {
+            L.marker([parseFloat(campusInfo.latitude), parseFloat(campusInfo.longitude)], {
                     icon: campusCustomIcon
                 })
                 .addTo(map)
                 .bindPopup(`<div class="text-slate-900 p-1"><b class="text-xs block uppercase text-rose-600">${campusInfo.name}</b></div>`)
                 .openPopup();
 
-            if (kostLocations.length > 0) {
+            // Plotting Marker Kost
+            if (Array.isArray(kostLocations) && kostLocations.length > 0) {
+                const baseUrlUploads = '<?= base_url('uploads/kosts/') ?>';
+
                 kostLocations.forEach(function(kost, index) {
-                    if (kost.latitude && kost.longitude) {
+                    const lat = parseFloat(kost.latitude);
+                    const lng = parseFloat(kost.longitude);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
                         const kostCustomIcon = L.divIcon({
                             html: `<div class="flex items-center justify-center w-7 h-7 bg-indigo-600 rounded-full shadow border-2 border-white text-white transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></div>`,
                             className: 'custom-kost-marker',
@@ -323,21 +331,30 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                             iconAnchor: [14, 14]
                         });
 
-                        const marker = L.marker([kost.latitude, kost.longitude], {
+                        const marker = L.marker([lat, lng], {
                             icon: kostCustomIcon
                         }).addTo(map);
 
+                        // Handling Parsing Gambar Safe-Fail
                         let photoList = [];
                         if (kost.images) {
-                            photoList = Array.isArray(kost.images) ? kost.images : JSON.parse(kost.images);
+                            if (Array.isArray(kost.images)) {
+                                photoList = kost.images;
+                            } else if (typeof kost.images === 'string') {
+                                try {
+                                    photoList = JSON.parse(kost.images);
+                                } catch (e) {
+                                    photoList = kost.images.split(',').map(s => s.trim());
+                                }
+                            }
                         }
 
                         let popupGalleryHtml = '';
-                        if (photoList && photoList.length > 0) {
+                        if (Array.isArray(photoList) && photoList.length > 0) {
                             popupGalleryHtml = '<div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:8px; max-height:120px; overflow-y:auto;">';
                             photoList.forEach(function(img) {
                                 if (img) {
-                                    popupGalleryHtml += `<img src="${'<?= base_url('uploads/kosts/') ?>' + img}" style="width:100%; height:55px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;" alt="${kost.name}">`;
+                                    popupGalleryHtml += `<img src="${baseUrlUploads + img}" style="width:100%; height:55px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;" alt="${kost.name}">`;
                                 }
                             });
                             popupGalleryHtml += '</div>';

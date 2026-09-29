@@ -20,17 +20,14 @@ class Booking extends BaseController
 
     public function submit(): \CodeIgniter\HTTP\RedirectResponse
     {
-        // 1. Pengecekan status login
         if (!session()->get('is_logged_in')) {
             return redirect()->to(base_url('/login'))->with('error', 'Silakan login terlebih dahulu untuk melakukan pengajuan booking sewa.');
         }
 
-        // 2. Cek Role, hanya Tenant yang boleh ajukan sewa
         if (session()->get('role') !== 'tenant') {
             return redirect()->back()->with('error', 'Hanya akun pencari/penyewa kost yang dapat mengajukan pemesanan kamar.');
         }
 
-        // 3. Validasi Form & File Upload
         $rules = [
             'kost_id'        => 'required|numeric',
             'occupant_count' => 'required|numeric|greater_than[0]',
@@ -64,7 +61,6 @@ class Booking extends BaseController
             return redirect()->back()->with('error', 'Maaf, unit kost ini sedang penuh atau tidak menerima hunian baru.');
         }
 
-        // Handle upload berkas identitas
         $docFile = $this->request->getFile('identity_doc');
         $docName = '';
 
@@ -75,7 +71,6 @@ class Booking extends BaseController
             return redirect()->back()->with('error', 'Gagal memproses unggahan berkas identitas.');
         }
 
-        // Simpan booking
         $this->bookingModel->insert([
             'user_id'        => $userId,
             'kost_id'        => $kostId,

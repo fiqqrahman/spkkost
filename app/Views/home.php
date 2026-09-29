@@ -363,7 +363,6 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
             const titleElement = document.getElementById('modal-kost-title');
 
             if (inputKostId && kost) {
-                // Ambil kost.id yang sekarang sudah dikirim dari controller
                 inputKostId.value = kost.id || '';
                 titleElement.innerText = 'Mengajukan sewa untuk unit: ' + (kost.name || '');
                 document.getElementById('bookingModal').classList.remove('hidden');

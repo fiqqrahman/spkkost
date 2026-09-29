@@ -86,7 +86,6 @@ $incomingBookings = $incomingBookings ?? [];
             </div>
         </section>
 
-        <!-- Form Tambah Kost & Map -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <section class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between h-full">
                 <div>
@@ -175,7 +174,6 @@ $incomingBookings = $incomingBookings ?? [];
             </section>
         </div>
 
-        <!-- Tabel Kost Milik Pemilik -->
         <section class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
                 <div>
@@ -255,7 +253,6 @@ $incomingBookings = $incomingBookings ?? [];
             </div>
         </section>
 
-        <!-- SEKSI BARU: Kelola Pengajuan Sewa & Pembayaran Masuk -->
         <section class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div class="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
                 <div>
@@ -314,7 +311,6 @@ $incomingBookings = $incomingBookings ?? [];
                                 <?php endif; ?>
                             </div>
 
-                            <!-- Bukti Pembayaran Penyewa -->
                             <div class="pt-1">
                                 <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Bukti Bayar Masuk:</h4>
                                 <?php if (!empty($b['payments'])): ?>
@@ -376,7 +372,6 @@ $incomingBookings = $incomingBookings ?? [];
         </section>
     </main>
 
-    <!-- Modal Edit Kost -->
     <div id="editModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 shadow-xl space-y-4 my-8">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -455,7 +450,6 @@ $incomingBookings = $incomingBookings ?? [];
         </div>
     </div>
 
-    <!-- Modal Penolakan Booking -->
     <div id="rejectModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4 my-8">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">

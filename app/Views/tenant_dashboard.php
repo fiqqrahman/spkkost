@@ -133,7 +133,6 @@
                                 </div>
                             <?php endif; ?>
 
-                            <!-- Sub-Tabel Riwayat Pembayaran -->
                             <div class="pt-2">
                                 <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Riwayat Pembayaran Unit Ini:</h4>
                                 <?php if (!empty($b['payments'])): ?>
@@ -186,7 +185,6 @@
         </section>
     </main>
 
-    <!-- Modal Form Payment -->
     <div id="paymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-xl space-y-4 my-8">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -228,7 +226,6 @@
         </div>
     </div>
 
-    <!-- Modal Form Terminate/Berhenti Sewa -->
     <div id="terminationModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-xl space-y-4 my-8">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">

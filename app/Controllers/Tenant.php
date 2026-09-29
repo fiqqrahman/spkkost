@@ -26,7 +26,6 @@ class Tenant extends BaseController
 
         $userId = (int)session()->get('user_id');
 
-        // [!] Ambil booking milik tenant yang HANYA AKTIF / BERJALAN (Abaikan status 'terminated' & 'rejected')
         $myBookings = $this->db->table('bookings')
             ->select('bookings.*, kosts.name as kost_name, kosts.price as kost_price, kosts.image as kost_image')
             ->join('kosts', 'kosts.id = bookings.kost_id')
@@ -82,7 +81,6 @@ class Tenant extends BaseController
         $bookingId = (int)$this->request->getPost('booking_id');
         $amount    = (float)$this->request->getPost('amount');
 
-        // Validasi kepemilikan booking
         $booking = $this->bookingModel->where('id', $bookingId)->where('user_id', $userId)->first();
         if (!$booking || $booking['status'] !== 'approved') {
             return redirect()->back()->with('error', 'Transaksi pembayaran tidak valid atau booking belum disetujui.');

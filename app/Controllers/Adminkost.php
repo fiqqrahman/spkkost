@@ -8,11 +8,19 @@ use App\Models\PaymentModel;
 
 class Adminkost extends BaseController
 {
+    // Koneksi database utama
     protected \CodeIgniter\Database\BaseConnection $db;
+
+    // Instance model untuk entitas kost
     private KostModel $kostModel;
+
+    // Instance model untuk entitas pemesanan
     private BookingModel $bookingModel;
+
+    // Instance model untuk entitas pembayaran
     private PaymentModel $paymentModel;
 
+    // Konstruktor controller untuk inisialisasi modul dan koneksi DB
     public function __construct()
     {
         $this->db           = \Config\Database::connect();
@@ -21,15 +29,20 @@ class Adminkost extends BaseController
         $this->paymentModel = new PaymentModel();
     }
 
+    // Menampilkan halaman utama dashboard owner kost
     public function index(): string
     {
+        // Ambil ID user dari session aktif
         $userId  = (int)session()->get('user_id');
+
+        // Ambil daftar kost yang dimiliki oleh user
         $myKosts = $this->kostModel->where('user_id', $userId)->findAll();
 
         if (!empty($myKosts)) {
+            // Ekstrak seluruh ID kost milik user
             $kostIds = array_column($myKosts, 'id');
 
-            // Ambil fasilitas tiap kost
+            // Query join untuk mengambil fasilitas dari daftar kost terkait
             $featuresRaw = $this->db->table('kost_features')
                 ->join('features', 'features.id = kost_features.feature_id')
                 ->select('kost_features.kost_id, features.id as feature_id, features.name as feature_name')
@@ -37,21 +50,27 @@ class Adminkost extends BaseController
                 ->get()
                 ->getResultArray();
 
+            // Peta ID fasilitas berdasarkan ID kost
             $kostFeaturesMap     = [];
+
+            // Peta nama fasilitas berdasarkan ID kost
             $kostFeatureNamesMap = [];
+
+            // Petakan fasilitas ke array pendukung berdasarkan ID kost
             foreach ($featuresRaw as $fr) {
                 $kId = (int)$fr['kost_id'];
                 $kostFeaturesMap[$kId][]     = (int)$fr['feature_id'];
                 $kostFeatureNamesMap[$kId][] = $fr['feature_name'];
             }
 
+            // Gabungkan fasilitas yang dipetakan ke dalam array data kost
             foreach ($myKosts as &$kost) {
                 $kost['selected_features'] = $kostFeaturesMap[$kost['id']] ?? [];
                 $kost['feature_names']     = $kostFeatureNamesMap[$kost['id']] ?? [];
             }
             unset($kost);
 
-            // Ambil pengajuan sewa masuk untuk kost milik user
+            // Ambil daftar pemesanan masuk untuk seluruh kost milik user
             $incomingBookings = $this->db->table('bookings')
                 ->select('bookings.*, kosts.name as kost_name, users.username as tenant_name, users.email as tenant_email')
                 ->join('kosts', 'kosts.id = bookings.kost_id')
@@ -62,7 +81,7 @@ class Adminkost extends BaseController
                 ->get()
                 ->getResultArray();
 
-            // Ambil bukti pembayaran terkait
+            // Lampirkan riwayat pembayaran untuk setiap item pemesanan
             foreach ($incomingBookings as &$b) {
                 $b['payments'] = $this->paymentModel
                     ->where('booking_id', (int)$b['id'])
@@ -71,17 +90,21 @@ class Adminkost extends BaseController
             }
             unset($b);
         } else {
+            // Tetapkan array kosong jika owner tidak memiliki kost
             $incomingBookings = [];
         }
 
+        // Rendisi view dashboard dengan data yang diproses
         return view('adminkost', [
             'myKosts'          => $myKosts,
             'incomingBookings' => $incomingBookings
         ]);
     }
 
+    // Menyimpan data kost baru ke database
     public function save(): \CodeIgniter\HTTP\RedirectResponse
     {
+        // Aturan validasi input formulir
         $rules = [
             'name'      => 'required|min_length[3]|max_length[150]',
             'price'     => 'required|numeric|greater_than_equal_to[0]',
@@ -101,10 +124,12 @@ class Adminkost extends BaseController
             ]
         ];
 
+        // Jalankan pemeriksaan validasi input
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->listErrors());
         }
 
+        // Tangkap data yang dikirim via method POST
         $userId    = (int)session()->get('user_id');
         $name      = $this->request->getPost('name');
         $price     = $this->request->getPost('price');
@@ -112,9 +137,11 @@ class Adminkost extends BaseController
         $longitude = $this->request->getPost('longitude');
         $features  = $this->request->getPost('features') ?? [];
 
+        // Array penampung file gambar yang berhasil diunggah
         $uploadedImages = [];
         $imageFiles     = $this->request->getFileMultiple('images');
 
+        // Memproses pengunggahan file gambar
         if ($imageFiles) {
             $allowedMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
             foreach ($imageFiles as $file) {
@@ -129,8 +156,10 @@ class Adminkost extends BaseController
             }
         }
 
+        // Mulai transaksi database untuk proses penyimpanan
         $this->db->transStart();
 
+        // Data kost yang siap dimasukkan
         $kostData = [
             'user_id'   => $userId,
             'name'      => $name,
@@ -320,7 +349,6 @@ class Adminkost extends BaseController
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Aset kost berhasil dihapus.');
     }
 
-    // --- FITUR BARU: Verifikasi Booking & Pembayaran ---
 
     public function handleBooking(int $id, string $action): \CodeIgniter\HTTP\RedirectResponse
     {

@@ -194,7 +194,7 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
 
     <footer class="bg-white border-t border-slate-200 py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-            &copy; <?= date('Y') ?> SPK Rekomendasi Kost Palangka Raya. All rights reserved.
+            &copy; <?= date('Y') ?> SPK Rekomendasi Kost Palangka Raya (Delima Nurul Azmi). All rights reserved.
         </div>
     </footer>
 

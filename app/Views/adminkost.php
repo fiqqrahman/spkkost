@@ -111,7 +111,7 @@ $incomingBookings = $incomingBookings ?? [];
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Fasilitas Properti</label>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Fasilitas Kost</label>
                             <div class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
                                 <label class="flex items-center gap-2 cursor-pointer text-slate-700">
                                     <input type="checkbox" name="features[]" value="1" class="rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">

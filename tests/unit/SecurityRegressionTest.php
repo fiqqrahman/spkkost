@@ -33,11 +33,11 @@ final class SecurityRegressionTest extends CIUnitTestCase
         $routes = $this->source('app/Config/Routes.php');
 
         $this->assertMatchesRegularExpression(
-            "/\\$routes->post\\('logout',\\s*'Auth::logout'\\);/",
+            "/\$routes->post\('logout',\s*'Auth::logout'\);/",
             $routes
         );
         $this->assertDoesNotMatchRegularExpression(
-            "/\\$routes->get\\('logout',\\s*'Auth::logout'\\);/",
+            "/\$routes->get\('logout',\s*'Auth::logout'\);/",
             $routes
         );
     }

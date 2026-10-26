@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\KostModel;
 use App\Models\BookingModel;
 use App\Models\PaymentModel;
+use App\Libraries\UploadFileManager;
+use Throwable;
 
 class Adminkost extends BaseController
 {
@@ -20,6 +22,8 @@ class Adminkost extends BaseController
     // Instance model untuk entitas pembayaran
     private PaymentModel $paymentModel;
 
+    private UploadFileManager $uploadFileManager;
+
     // Konstruktor controller untuk inisialisasi modul dan koneksi DB
     public function __construct()
     {
@@ -27,6 +31,7 @@ class Adminkost extends BaseController
         $this->kostModel    = new KostModel();
         $this->bookingModel = new BookingModel();
         $this->paymentModel = new PaymentModel();
+        $this->uploadFileManager = new UploadFileManager();
     }
 
     // Menampilkan halaman utama dashboard owner kost
@@ -137,62 +142,73 @@ class Adminkost extends BaseController
         $longitude = $this->request->getPost('longitude');
         $features  = $this->request->getPost('features') ?? [];
 
-        // Array penampung file gambar yang berhasil diunggah
         $uploadedImages = [];
         $imageFiles     = $this->request->getFileMultiple('images');
+        $uploadDirectory = ROOTPATH . 'public/uploads/kosts/';
+        $transactionOpen = false;
 
-        // Memproses pengunggahan file gambar
-        if ($imageFiles) {
+        try {
             $allowedMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
-            foreach ($imageFiles as $file) {
-                if ($file->isValid() && !$file->hasMoved()) {
-                    $serverMime = $file->getMimeType();
-                    if (in_array($serverMime, $allowedMimes, true)) {
-                        $encryptedName = $file->getRandomName();
-                        $file->move(ROOTPATH . 'public/uploads/kosts/', $encryptedName);
-                        $uploadedImages[] = $encryptedName;
-                    }
+            foreach ($imageFiles ?? [] as $file) {
+                if (! $file->isValid() || $file->hasMoved()) {
+                    throw new \RuntimeException('An uploaded kost image is invalid.');
+                }
+                if (! in_array($file->getMimeType(), $allowedMimes, true)) {
+                    throw new \RuntimeException('An uploaded kost image has an unsupported MIME type.');
+                }
+                $uploadedImages[] = $this->uploadFileManager->store($file, $uploadDirectory);
+            }
+
+            if ($uploadedImages === []) {
+                throw new \RuntimeException('At least one kost image is required.');
+            }
+
+            if (! $this->db->transBegin()) {
+                throw new \RuntimeException('Could not start the kost transaction.');
+            }
+            $transactionOpen = true;
+
+            $kostData = [
+                'user_id'   => $userId,
+                'name'      => $name,
+                'price'     => (float)$price,
+                'latitude'  => (float)$latitude,
+                'longitude' => (float)$longitude,
+                'is_active' => 1,
+                'is_full'   => 0,
+                'image'     => json_encode($uploadedImages),
+            ];
+
+            if ($this->kostModel->insert($kostData) === false) {
+                throw new \RuntimeException('Could not insert the kost record.');
+            }
+            $kostId = (int)$this->kostModel->getInsertID();
+
+            if (! empty($features) && is_array($features)) {
+                $batchData = [];
+                foreach ($features as $featureId) {
+                    $batchData[] = [
+                        'kost_id'    => $kostId,
+                        'feature_id' => (int)$featureId,
+                    ];
+                }
+
+                if ($this->db->table('kost_features')->insertBatch($batchData) === false) {
+                    throw new \RuntimeException('Could not save the kost features.');
                 }
             }
-        }
 
-        // Mulai transaksi database untuk proses penyimpanan
-        $this->db->transStart();
-
-        // Data kost yang siap dimasukkan
-        $kostData = [
-            'user_id'   => $userId,
-            'name'      => $name,
-            'price'     => (float)$price,
-            'latitude'  => (float)$latitude,
-            'longitude' => (float)$longitude,
-            'is_active' => 1,
-            'is_full'   => 0,
-            'image'     => !empty($uploadedImages) ? json_encode($uploadedImages) : null
-        ];
-
-        // Insert record kost utama
-        $this->kostModel->insert($kostData);
-        $kostId = $this->kostModel->getInsertID();
-
-        // Simpan data pemetaan fasilitas jika dipilih
-        if (!empty($features) && is_array($features)) {
-            $builder   = $this->db->table('kost_features');
-            $batchData = [];
-            foreach ($features as $featureId) {
-                $batchData[] = [
-                    'kost_id'    => (int)$kostId,
-                    'feature_id' => (int)$featureId
-                ];
+            if ($this->db->transStatus() === false || ! $this->db->transCommit()) {
+                throw new \RuntimeException('Could not commit the kost transaction.');
             }
-            $builder->insertBatch($batchData);
-        }
+            $transactionOpen = false;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transRollback();
+            }
+            $this->uploadFileManager->deleteMany($uploadDirectory, $uploadedImages);
+            log_message('error', 'Kost creation failed: {message}', ['message' => $exception->getMessage()]);
 
-        // Selesaikan transaksi database
-        $this->db->transComplete();
-
-        // Evaluasi keberhasilan transaksi database
-        if ($this->db->transStatus() === false) {
             return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan saat menyimpan data.');
         }
 
@@ -211,7 +227,12 @@ class Adminkost extends BaseController
 
             // Balikkan status ketersedian kost
             $newStatus = ((int)$kost['is_full'] === 1) ? 0 : 1;
-            $this->kostModel->update($id, ['is_full' => $newStatus]);
+            if (! $this->performModelUpdate(
+                fn () => $this->kostModel->update($id, ['is_full' => $newStatus]),
+                'Kost availability update failed',
+            )) {
+                return redirect()->back()->with('error', 'Status ketersediaan kost gagal diperbarui.');
+            }
         } else {
             return redirect()->to(base_url('/owner/dashboard'))->with('error', 'Akses ditolak.');
         }
@@ -261,78 +282,81 @@ class Adminkost extends BaseController
         $latitude       = $this->request->getPost('latitude');
         $longitude      = $this->request->getPost('longitude');
         $features       = $this->request->getPost('features') ?? [];
-        $uploadedImages = [];
-        $imageFiles     = $this->request->getFileMultiple('images');
-        $hasNewImages   = false;
+        $uploadedImages  = [];
+        $imageFiles      = $this->request->getFileMultiple('images');
+        $uploadDirectory = ROOTPATH . 'public/uploads/kosts/';
+        $oldImages       = $this->decodeKostImageNames($kost['image'] ?? null);
+        $transactionOpen = false;
 
-        // Memproses berkas gambar baru jika diunggah
-        if ($imageFiles) {
+        try {
             $allowedMimes = ['image/jpg', 'image/jpeg', 'image/png', 'image/webp'];
-            foreach ($imageFiles as $file) {
-                if ($file->isValid() && !$file->hasMoved()) {
-                    $serverMime = $file->getMimeType();
-                    if (in_array($serverMime, $allowedMimes, true)) {
-                        $encryptedName = $file->getRandomName();
-                        $file->move(ROOTPATH . 'public/uploads/kosts/', $encryptedName);
-                        $uploadedImages[] = $encryptedName;
-                        $hasNewImages     = true;
-                    }
+            foreach ($imageFiles ?? [] as $file) {
+                if ($file->getError() === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                if (! $file->isValid() || $file->hasMoved()) {
+                    throw new \RuntimeException('An uploaded kost image is invalid.');
+                }
+                if (! in_array($file->getMimeType(), $allowedMimes, true)) {
+                    throw new \RuntimeException('An uploaded kost image has an unsupported MIME type.');
+                }
+                $uploadedImages[] = $this->uploadFileManager->store($file, $uploadDirectory);
+            }
+
+            if (! $this->db->transBegin()) {
+                throw new \RuntimeException('Could not start the kost update transaction.');
+            }
+            $transactionOpen = true;
+
+            $updateData = [
+                'name'      => $name,
+                'price'     => (float)$price,
+                'latitude'  => (float)$latitude,
+                'longitude' => (float)$longitude,
+            ];
+
+            if ($uploadedImages !== []) {
+                $updateData['image'] = json_encode($uploadedImages);
+            }
+
+            if ($this->kostModel->update($id, $updateData) === false) {
+                throw new \RuntimeException('Could not update the kost record.');
+            }
+
+            if ($this->db->table('kost_features')->where('kost_id', $id)->delete() === false) {
+                throw new \RuntimeException('Could not replace the kost features.');
+            }
+
+            if (! empty($features) && is_array($features)) {
+                $batchData = [];
+                foreach ($features as $featureId) {
+                    $batchData[] = [
+                        'kost_id'    => (int)$id,
+                        'feature_id' => (int)$featureId,
+                    ];
+                }
+
+                if ($this->db->table('kost_features')->insertBatch($batchData) === false) {
+                    throw new \RuntimeException('Could not save the updated kost features.');
                 }
             }
-        }
 
-        // Hapus file gambar lama jika ada unggahan baru
-        if ($hasNewImages && !empty($kost['image'])) {
-            $oldImages = json_decode($kost['image'], true);
-            if (is_array($oldImages)) {
-                foreach ($oldImages as $oldFile) {
-                    $physicalPath = ROOTPATH . 'public/uploads/kosts/' . $oldFile;
-                    if (file_exists($physicalPath)) {
-                        unlink($physicalPath);
-                    }
-                }
+            if ($this->db->transStatus() === false || ! $this->db->transCommit()) {
+                throw new \RuntimeException('Could not commit the kost update transaction.');
             }
-        }
-
-        // Mulai transaksi database untuk pembaruan
-        $this->db->transStart();
-
-        $updateData = [
-            'name'      => $name,
-            'price'     => (float)$price,
-            'latitude'  => (float)$latitude,
-            'longitude' => (float)$longitude,
-        ];
-
-        if ($hasNewImages) {
-            $updateData['image'] = json_encode($uploadedImages);
-        }
-
-        // Perbarui data utama kost
-        $this->kostModel->update($id, $updateData);
-
-        // Hapus fasilitas lama sebelum memperbarui relasi fasilitas
-        $this->db->table('kost_features')->where('kost_id', $id)->delete();
-
-        // Sisipkan kembali relasi fasilitas jika diupdate
-        if (!empty($features) && is_array($features)) {
-            $builder   = $this->db->table('kost_features');
-            $batchData = [];
-            foreach ($features as $featureId) {
-                $batchData[] = [
-                    'kost_id'    => (int)$id,
-                    'feature_id' => (int)$featureId
-                ];
+            $transactionOpen = false;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transRollback();
             }
-            $builder->insertBatch($batchData);
-        }
+            $this->uploadFileManager->deleteMany($uploadDirectory, $uploadedImages);
+            log_message('error', 'Kost update failed: {message}', ['message' => $exception->getMessage()]);
 
-        // Selesaikan transaksi database
-        $this->db->transComplete();
-
-        // Validasi status transaksi
-        if ($this->db->transStatus() === false) {
             return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan saat memperbarui data.');
+        }
+
+        if ($uploadedImages !== []) {
+            $this->uploadFileManager->deleteMany($uploadDirectory, $oldImages);
         }
 
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Data properti kost berhasil diperbarui.');
@@ -350,28 +374,68 @@ class Adminkost extends BaseController
             return redirect()->to(base_url('/owner/dashboard'))->with('error', 'Akses ilegal! Properti tidak ditemukan.');
         }
 
-        // Hapus file fisik gambar dari direktori server
-        if (!empty($kost['image'])) {
-            $imagesArray = json_decode($kost['image'], true);
-            if (is_array($imagesArray)) {
-                foreach ($imagesArray as $fileName) {
-                    $physicalPath = ROOTPATH . 'public/uploads/kosts/' . $fileName;
-                    if (file_exists($physicalPath)) {
-                        unlink($physicalPath);
-                    }
-                }
+        $uploadDirectory = ROOTPATH . 'public/uploads/kosts/';
+        $oldImages       = $this->decodeKostImageNames($kost['image'] ?? null);
+        $transactionOpen = false;
+        $identityFiles   = [];
+        $paymentFiles    = [];
+
+        try {
+            if (! $this->db->transBegin()) {
+                throw new \RuntimeException('Could not start the kost deletion transaction.');
             }
-        }
+            $transactionOpen = true;
 
-        // Jalankan transaksi penghapusan di DB
-        $this->db->transStart();
-        $this->db->table('kost_features')->where('kost_id', $id)->delete();
-        $this->kostModel->delete($id);
-        $this->db->transComplete();
+            // Lock the parent row so new child records cannot race the cascade cleanup.
+            $kostTable = $this->db->protectIdentifiers('kosts');
+            $lockedKost = $this->db->query(
+                'SELECT id FROM ' . $kostTable . ' WHERE id = ? AND user_id = ? FOR UPDATE',
+                [$id, $userId],
+            )->getRowArray();
+            if (! $lockedKost) {
+                throw new \RuntimeException('The kost record is no longer available to this owner.');
+            }
 
-        if ($this->db->transStatus() === false) {
+            $bookingRows = $this->db->table('bookings')
+                ->select('id, identity_doc')
+                ->where('kost_id', $id)
+                ->get()
+                ->getResultArray();
+            $bookingIds    = array_map('intval', array_column($bookingRows, 'id'));
+            $identityFiles = array_values(array_filter(array_column($bookingRows, 'identity_doc'), 'is_string'));
+
+            if ($bookingIds !== []) {
+                $paymentRows = $this->db->table('payments')
+                    ->select('proof_image')
+                    ->whereIn('booking_id', $bookingIds)
+                    ->get()
+                    ->getResultArray();
+                $paymentFiles = array_values(array_filter(array_column($paymentRows, 'proof_image'), 'is_string'));
+            }
+
+            if ($this->db->table('kost_features')->where('kost_id', $id)->delete() === false) {
+                throw new \RuntimeException('Could not delete the kost feature links.');
+            }
+            if ($this->kostModel->delete($id) === false) {
+                throw new \RuntimeException('Could not delete the kost record.');
+            }
+            if ($this->db->transStatus() === false || ! $this->db->transCommit()) {
+                throw new \RuntimeException('Could not commit the kost deletion transaction.');
+            }
+            $transactionOpen = false;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transRollback();
+            }
+            log_message('error', 'Kost deletion failed: {message}', ['message' => $exception->getMessage()]);
+
             return redirect()->back()->with('error', 'Gagal memproses penghapusan data.');
         }
+
+        // Hapus berkas hanya setelah transaksi database berhasil.
+        $this->uploadFileManager->deleteMany($uploadDirectory, $oldImages);
+        $this->uploadFileManager->deleteMany(WRITEPATH . 'uploads/identities/', $identityFiles);
+        $this->uploadFileManager->deleteMany(WRITEPATH . 'uploads/payments/', $paymentFiles);
 
         return redirect()->to(base_url('/owner/dashboard'))->with('success', 'Aset kost berhasil dihapus.');
     }
@@ -396,14 +460,24 @@ class Adminkost extends BaseController
 
         // Proses aksi persetujuan atau penolakan
         if ($action === 'approve') {
-            $this->bookingModel->update($id, ['status' => 'approved']);
+            if (! $this->performModelUpdate(
+                fn () => $this->bookingModel->update($id, ['status' => 'approved']),
+                'Booking approval failed',
+            )) {
+                return redirect()->back()->with('error', 'Pengajuan sewa gagal diperbarui.');
+            }
             return redirect()->back()->with('success', 'Pengajuan sewa telah disetujui.');
         } elseif ($action === 'reject') {
             $note = (string)$this->request->getPost('rejection_note');
-            $this->bookingModel->update($id, [
-                'status'         => 'rejected',
-                'rejection_note' => $note
-            ]);
+            if (! $this->performModelUpdate(
+                fn () => $this->bookingModel->update($id, [
+                    'status'         => 'rejected',
+                    'rejection_note' => $note,
+                ]),
+                'Booking rejection failed',
+            )) {
+                return redirect()->back()->with('error', 'Pengajuan sewa gagal diperbarui.');
+            }
             return redirect()->back()->with('success', 'Pengajuan sewa telah ditolak.');
         }
 
@@ -430,10 +504,20 @@ class Adminkost extends BaseController
 
         // Setujui atau tolak terminasi penyewaan
         if ($action === 'approve') {
-            $this->bookingModel->update($id, ['status' => 'terminated']);
+            if (! $this->performModelUpdate(
+                fn () => $this->bookingModel->update($id, ['status' => 'terminated']),
+                'Termination approval failed',
+            )) {
+                return redirect()->back()->with('error', 'Pengajuan berhenti sewa gagal diperbarui.');
+            }
             return redirect()->back()->with('success', 'Pengajuan berhenti sewa telah disetujui. Unit resmi dikosongkan.');
         } elseif ($action === 'reject') {
-            $this->bookingModel->update($id, ['status' => 'approved']);
+            if (! $this->performModelUpdate(
+                fn () => $this->bookingModel->update($id, ['status' => 'approved']),
+                'Termination rejection failed',
+            )) {
+                return redirect()->back()->with('error', 'Pengajuan berhenti sewa gagal diperbarui.');
+            }
             return redirect()->back()->with('success', 'Pengajuan berhenti sewa ditolak. Status kembali aktif.');
         }
 
@@ -461,8 +545,51 @@ class Adminkost extends BaseController
 
         // Perbarui status verifikasi pembayaran
         $newStatus = ($action === 'verify') ? 'verified' : 'rejected';
-        $this->paymentModel->update($id, ['status' => $newStatus]);
+        if (! $this->performModelUpdate(
+            fn () => $this->paymentModel->update($id, ['status' => $newStatus]),
+            'Payment verification update failed',
+        )) {
+            return redirect()->back()->with('error', 'Status transaksi gagal diperbarui.');
+        }
 
         return redirect()->back()->with('success', 'Status transaksi pembayaran berhasil diperbarui.');
+    }
+
+    /** @return list<string> */
+    private function decodeKostImageNames(?string $storedImages): array
+    {
+        if ($storedImages === null || $storedImages === '') {
+            return [];
+        }
+
+        $images = json_decode($storedImages, true);
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $images,
+            static fn ($fileName): bool => is_string($fileName) && $fileName !== '',
+        ));
+    }
+
+    private function performModelUpdate(callable $update, string $context): bool
+    {
+        try {
+            if ($update() !== false) {
+                return true;
+            }
+        } catch (Throwable $exception) {
+            log_message('error', '{context}: {message}', [
+                'context' => $context,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        log_message('error', '{context}: the model update returned false.', ['context' => $context]);
+
+        return false;
     }
 }

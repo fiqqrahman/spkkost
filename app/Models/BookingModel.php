@@ -16,6 +16,7 @@ class BookingModel extends Model
         'identity_doc',
         'status',
         'rejection_note',
+        'termination_reason',
         'created_at',
         'updated_at'
     ];

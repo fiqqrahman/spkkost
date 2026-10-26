@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\BookingModel;
 use App\Models\PaymentModel;
+use App\Libraries\UploadFileManager;
+use Throwable;
 
 class Tenant extends BaseController
 {
@@ -16,12 +18,15 @@ class Tenant extends BaseController
     // Instance model untuk entitas pembayaran
     private PaymentModel $paymentModel;
 
+    private UploadFileManager $uploadFileManager;
+
     // Konstruktor controller untuk menginisialisasi model dan koneksi database
     public function __construct()
     {
         $this->db           = \Config\Database::connect();
         $this->bookingModel = new BookingModel();
         $this->paymentModel = new PaymentModel();
+        $this->uploadFileManager = new UploadFileManager();
     }
 
     // Menampilkan halaman dashboard utama untuk penyewa kost
@@ -105,22 +110,47 @@ class Tenant extends BaseController
 
         // Memproses pengungahan file bukti bayar
         $file = $this->request->getFile('proof_image');
-        $fileName = '';
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            $fileName = $file->getRandomName();
-            $file->move(ROOTPATH . 'public/uploads/payments/', $fileName);
-        } else {
+        if (! $file || ! $file->isValid() || $file->hasMoved()) {
             return redirect()->back()->with('error', 'Gagal memproses berkas gambar.');
         }
 
-        // Simpan data pembayaran ke database
-        $this->paymentModel->insert([
-            'booking_id'   => $bookingId,
-            'amount'       => $amount,
-            'proof_image'  => $fileName,
-            'payment_date' => date('Y-m-d H:i:s'),
-            'status'       => 'pending'
-        ]);
+        $uploadDirectory = WRITEPATH . 'uploads/payments/';
+        $fileName        = null;
+        $transactionOpen = false;
+
+        try {
+            $fileName = $this->uploadFileManager->store($file, $uploadDirectory);
+
+            if (! $this->db->transBegin()) {
+                throw new \RuntimeException('Could not start the payment transaction.');
+            }
+            $transactionOpen = true;
+
+            if ($this->paymentModel->insert([
+                'booking_id'   => $bookingId,
+                'amount'       => $amount,
+                'proof_image'  => $fileName,
+                'payment_date' => date('Y-m-d H:i:s'),
+                'status'       => 'pending',
+            ]) === false || $this->db->transStatus() === false) {
+                throw new \RuntimeException('Could not save the payment record.');
+            }
+
+            if (! $this->db->transCommit()) {
+                throw new \RuntimeException('Could not commit the payment transaction.');
+            }
+            $transactionOpen = false;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transRollback();
+            }
+            if ($fileName !== null) {
+                $this->uploadFileManager->deleteMany($uploadDirectory, [$fileName]);
+            }
+            log_message('error', 'Payment upload failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->back()->withInput()->with('error', 'Pembayaran gagal disimpan. Silakan coba lagi.');
+        }
 
         return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Bukti pembayaran berhasil dikirim. Menunggu verifikasi pemilik kost.');
     }
@@ -156,10 +186,18 @@ class Tenant extends BaseController
         }
 
         // Perbarui status pemesanan ke pengajuan berhenti sewa
-        $this->bookingModel->update($bookingId, [
-            'status'             => 'termination_requested',
-            'termination_reason' => $terminationReason
-        ]);
+        try {
+            if ($this->bookingModel->update($bookingId, [
+                'status'             => 'termination_requested',
+                'termination_reason' => $terminationReason,
+            ]) === false) {
+                throw new \RuntimeException('Could not update the booking record.');
+            }
+        } catch (Throwable $exception) {
+            log_message('error', 'Termination request failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->back()->withInput()->with('error', 'Pengajuan berhenti sewa gagal disimpan. Silakan coba lagi.');
+        }
 
         return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Pengajuan berhenti sewa berhasil dikirimkan. Menunggu konfirmasi pemilik kost.');
     }

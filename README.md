@@ -31,6 +31,19 @@ Sebelum menjalankan proyek ini di lingkungan lokal, pastikan perangkat sudah mem
 - **Dependency Manager:** Composer[cite: 2]
 - **Local Server:** Laragon / XAMPP[cite: 2]
 
+## Menyiapkan lingkungan lokal
+
+1. Buat database MySQL/MariaDB bernama `kost_db` (atau sesuaikan namanya di `.env`).
+2. Salin `.env.example` menjadi `.env`, lalu sesuaikan URL, kredensial database, dan kunci enkripsi lokal.
+3. Pasang dependency dengan `composer install`.
+4. Pada database baru yang masih kosong, jalankan `php spark migrate` lalu `php spark db:seed InitialCatalogSeeder`.
+
+Migration membuat tabel aplikasi dan tabel sesi database. Seeder hanya mengisi katalog kampus, kriteria, dan fasilitas ketika tabelnya kosong; seeder tidak membuat akun atau mengimpor data operasional. Untuk database yang sudah berisi data, backup dan cocokkan skema terlebih dahulu sebelum menjalankan migration awal.
+
+Foto properti disimpan di `public/uploads/kosts`, sedangkan dokumen identitas dan bukti pembayaran disimpan di `writable/uploads` dan dilayani hanya melalui route terotorisasi. Server aplikasi/deployment harus memberi izin tulis pada kedua direktori tersebut. File unggahan runtime diabaikan Git; `.gitignore` tidak otomatis melepas file yang sudah terlanjur dilacak.
+
+Pada deployment yang sudah memiliki dokumen sensitif di `public/uploads/identities` atau `public/uploads/payments`, jalankan `php spark app:migrate-private-uploads` saat aplikasi dalam mode pemeliharaan. Perintah ini memindahkan file lama ke `writable/uploads` dengan nama tetap sehingga referensi database tidak perlu diubah. Aturan `.htaccess` juga menolak akses langsung ke file lama pada Apache; untuk Nginx atau server lain, pastikan URL `/uploads/identities/` dan `/uploads/payments/` diblokir di konfigurasi server.
+
 ---
 <owner1@gmail.com>
 <owner2@gmail.com>

@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\BookingModel;
 use App\Models\KostModel;
+use App\Libraries\UploadFileManager;
+use Throwable;
 
 class Booking extends BaseController
 {
@@ -16,12 +18,15 @@ class Booking extends BaseController
     // Instance model untuk entitas kost
     private KostModel $kostModel;
 
+    private UploadFileManager $uploadFileManager;
+
     // Konstruktor controller untuk menginisialisasi model dan koneksi database
     public function __construct()
     {
         $this->db           = \Config\Database::connect();
         $this->bookingModel = new BookingModel();
         $this->kostModel    = new KostModel();
+        $this->uploadFileManager = new UploadFileManager();
     }
 
     // Memproses pengajuan booking sewa kost dari penyewa
@@ -37,16 +42,20 @@ class Booking extends BaseController
             return redirect()->back()->with('error', 'Hanya akun pencari/penyewa kost yang dapat mengajukan pemesanan kamar.');
         }
 
+        $docFile = $this->request->getFile('identity_doc');
+        $isPdf   = $docFile && strtolower($docFile->getClientExtension()) === 'pdf';
+        $documentRules = $isPdf
+            ? 'uploaded[identity_doc]|ext_in[identity_doc,pdf]|mime_in[identity_doc,application/pdf]|max_size[identity_doc,2048]'
+            : 'uploaded[identity_doc]|ext_in[identity_doc,jpg,jpeg,png,webp]|is_image[identity_doc]'
+                . '|mime_in[identity_doc,image/jpg,image/jpeg,image/png,image/webp]|max_size[identity_doc,2048]';
+
         // Aturan validasi input formulir booking
         $rules = [
             'kost_id'        => 'required|numeric',
             'occupant_count' => 'required|numeric|greater_than[0]',
             'campus_name'    => 'required|min_length[3]|max_length[150]',
             'identity_doc'   => [
-                'rules' => 'uploaded[identity_doc]'
-                    . '|is_image[identity_doc]'
-                    . '|mime_in[identity_doc,image/jpg,image/jpeg,image/png,image/webp,application/pdf]'
-                    . '|max_size[identity_doc,2048]',
+                'rules' => $documentRules,
                 'errors' => [
                     'uploaded' => 'Harap unggah bukti dokumen identitas (KTP/KTM).',
                     'is_image' => 'Dokumen identitas harus berupa gambar valid atau PDF.',
@@ -74,25 +83,48 @@ class Booking extends BaseController
         }
 
         // Memproses berkas unggahan dokumen identitas (KTP/KTM)
-        $docFile = $this->request->getFile('identity_doc');
-        $docName = '';
-
-        if ($docFile && $docFile->isValid() && !$docFile->hasMoved()) {
-            $docName = $docFile->getRandomName();
-            $docFile->move(ROOTPATH . 'public/uploads/identities/', $docName);
-        } else {
+        if (! $docFile || ! $docFile->isValid() || $docFile->hasMoved()) {
             return redirect()->back()->with('error', 'Gagal memproses unggahan berkas identitas.');
         }
 
-        // Simpan data pengajuan booking ke database dengan status pending
-        $this->bookingModel->insert([
-            'user_id'        => $userId,
-            'kost_id'        => $kostId,
-            'occupant_count' => $occupants,
-            'campus_name'    => $campus,
-            'identity_doc'   => $docName,
-            'status'         => 'pending'
-        ]);
+        $uploadDirectory = WRITEPATH . 'uploads/identities/';
+        $docName         = null;
+        $transactionOpen = false;
+
+        try {
+            $docName = $this->uploadFileManager->store($docFile, $uploadDirectory);
+
+            if (! $this->db->transBegin()) {
+                throw new \RuntimeException('Could not start the booking transaction.');
+            }
+            $transactionOpen = true;
+
+            if ($this->bookingModel->insert([
+                'user_id'        => $userId,
+                'kost_id'        => $kostId,
+                'occupant_count' => $occupants,
+                'campus_name'    => $campus,
+                'identity_doc'   => $docName,
+                'status'         => 'pending',
+            ]) === false || $this->db->transStatus() === false) {
+                throw new \RuntimeException('Could not save the booking record.');
+            }
+
+            if (! $this->db->transCommit()) {
+                throw new \RuntimeException('Could not commit the booking transaction.');
+            }
+            $transactionOpen = false;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transRollback();
+            }
+            if ($docName !== null) {
+                $this->uploadFileManager->deleteMany($uploadDirectory, [$docName]);
+            }
+            log_message('error', 'Booking submission failed: {message}', ['message' => $exception->getMessage()]);
+
+            return redirect()->back()->withInput()->with('error', 'Pengajuan booking gagal disimpan. Silakan coba lagi.');
+        }
 
         // Redirect kembali ke dashboard tenant membawa pesan sukses
         return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Pengajuan booking sewa berhasil dikirimkan! Silakan pantau status pengajuan antum di Dashboard Tenant.');

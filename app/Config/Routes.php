@@ -23,6 +23,7 @@ $routes->post('auth/register', 'Auth::attemptRegister');
 // ==========================================
 $routes->group('', ['filter' => 'auth_satpam:tenant'], static function (RouteCollection $routes): void {
     $routes->get('tenant/dashboard', 'Tenant::index');
+    $routes->get('tenant/files/payment/(:num)', 'PrivateFiles::tenantPayment/$1');
     $routes->post('booking/submit', 'Booking::submit');
     $routes->post('tenant/payment/upload', 'Tenant::uploadPayment');
     $routes->post('tenant/termination/request', 'Tenant::requestTermination');
@@ -36,6 +37,8 @@ $routes->group('owner', ['filter' => 'auth_satpam:owner'], static function (Rout
     // Halaman Utama & Dashboard Owner
     $routes->get('/', 'Adminkost::index');
     $routes->get('dashboard', 'Adminkost::index');
+    $routes->get('files/booking/(:num)/identity', 'PrivateFiles::ownerIdentity/$1');
+    $routes->get('files/payment/(:num)', 'PrivateFiles::ownerPayment/$1');
 
     // Pengurusan Properti Kost
     $routes->post('save', 'Adminkost::save');

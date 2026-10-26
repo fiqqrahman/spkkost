@@ -155,7 +155,7 @@
                                                         <td class="px-4 py-2 text-slate-600"><?= esc($p['payment_date']) ?></td>
                                                         <td class="px-4 py-2 text-right font-bold text-slate-800">Rp <?= number_format($p['amount'], 0, ',', '.') ?></td>
                                                         <td class="px-4 py-2 text-center">
-                                                            <a href="<?= base_url('uploads/payments/' . $p['proof_image']) ?>" target="_blank" class="text-indigo-600 underline font-semibold">
+                                                            <a href="<?= base_url('tenant/files/payment/' . (int)$p['id']) ?>" class="text-indigo-600 underline font-semibold">
                                                                 Lihat Resi
                                                             </a>
                                                         </td>

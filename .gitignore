@@ -60,6 +60,21 @@ Vagrantfile
 /writable/uploads/*
 !/writable/uploads/index.html
 
+# User uploads are runtime data; keep only safe placeholders in Git.
+/public/uploads/*
+!/public/uploads/.gitkeep
+!/public/uploads/identities/
+!/public/uploads/payments/
+!/public/uploads/kosts/
+/public/uploads/identities/*
+!/public/uploads/identities/index.html
+!/public/uploads/identities/.htaccess
+/public/uploads/payments/*
+!/public/uploads/payments/index.html
+!/public/uploads/payments/.htaccess
+/public/uploads/kosts/*
+!/public/uploads/kosts/index.html
+
 /writable/debugbar/*
 !/writable/debugbar/index.html
 

@@ -36,3 +36,5 @@ Sebelum menjalankan proyek ini di lingkungan lokal, pastikan perangkat sudah mem
 <owner2@gmail.com>
 <owner3@gmail.com>
 
+
+---

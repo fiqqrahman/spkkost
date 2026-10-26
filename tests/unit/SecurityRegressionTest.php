@@ -5,8 +5,8 @@ use CodeIgniter\Test\CIUnitTestCase;
 /**
  * Regression checks for the security hardening routes and filter configuration.
  *
- * These tests intentionally inspect the application's declared security
- * contract without connecting to or mutating the application database.
+ * These tests inspect the declared security contract without connecting to or
+ * mutating the application database.
  *
  * @internal
  */
@@ -33,11 +33,11 @@ final class SecurityRegressionTest extends CIUnitTestCase
         $routes = $this->source('app/Config/Routes.php');
 
         $this->assertMatchesRegularExpression(
-            "/\$routes->post\('logout',\s*'Auth::logout'\);/",
+            "/\\$routes->post\\('logout',\\s*'Auth::logout'\\);/",
             $routes
         );
         $this->assertDoesNotMatchRegularExpression(
-            "/\$routes->get\('logout',\s*'Auth::logout'\);/",
+            "/\\$routes->get\\('logout',\\s*'Auth::logout'\\);/",
             $routes
         );
     }
@@ -48,8 +48,8 @@ final class SecurityRegressionTest extends CIUnitTestCase
 
         $this->assertStringContainsString("['filter' => 'auth_satpam:tenant']", $routes);
         $this->assertStringContainsString("['filter' => 'auth_satpam:owner']", $routes);
-        $this->assertStringContainsString("$routes->get('tenant/dashboard', 'Tenant::index');", $routes);
-        $this->assertStringContainsString("$routes->get('dashboard', 'Adminkost::index');", $routes);
+        $this->assertStringContainsString('$routes->get(\'tenant/dashboard\', \'Tenant::index\');', $routes);
+        $this->assertStringContainsString('$routes->get(\'dashboard\', \'Adminkost::index\');', $routes);
     }
 
     public function testMutationRoutesUsePostRatherThanGet(): void
@@ -68,12 +68,12 @@ final class SecurityRegressionTest extends CIUnitTestCase
 
         foreach ($mutationRoutes as $route) {
             $this->assertStringContainsString(
-                "$routes->post('" . $route . "'",
+                '$routes->post(\'' . $route . '\'',
                 $routes,
                 'Expected POST mutation route is missing: ' . $route
             );
             $this->assertStringNotContainsString(
-                "$routes->get('" . $route . "'",
+                '$routes->get(\'' . $route . '\'',
                 $routes,
                 'Mutation route must not be registered as GET: ' . $route
             );
@@ -87,12 +87,12 @@ final class SecurityRegressionTest extends CIUnitTestCase
 
         foreach ($tenantMutations as $route) {
             $this->assertStringContainsString(
-                "$routes->post('" . $route . "'",
+                '$routes->post(\'' . $route . '\'',
                 $routes,
                 'Expected tenant POST mutation route is missing: ' . $route
             );
             $this->assertStringNotContainsString(
-                "$routes->get('" . $route . "'",
+                '$routes->get(\'' . $route . '\'',
                 $routes,
                 'Tenant mutation route must not be registered as GET: ' . $route
             );
@@ -103,10 +103,10 @@ final class SecurityRegressionTest extends CIUnitTestCase
     {
         $filter = $this->source('app/Filters/AuthFilter.php');
 
-        $this->assertStringContainsString("$session->get('is_logged_in')", $filter);
-        $this->assertStringContainsString("in_array($role, ['owner', 'tenant'], true)", $filter);
-        $this->assertStringContainsString("$expectedRole !== null && $role !== $expectedRole", $filter);
-        $this->assertStringContainsString("$session->destroy()", $filter);
+        $this->assertStringContainsString('$session->get(\'is_logged_in\')', $filter);
+        $this->assertStringContainsString("in_array(\$role, ['owner', 'tenant'], true)", $filter);
+        $this->assertStringContainsString('$expectedRole !== null && $role !== $expectedRole', $filter);
+        $this->assertStringContainsString('$session->destroy()', $filter);
         $this->assertStringContainsString("'/login'", $filter);
         $this->assertStringContainsString("'/tenant/dashboard'", $filter);
         $this->assertStringContainsString("'/owner/dashboard'", $filter);

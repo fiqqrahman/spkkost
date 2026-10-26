@@ -6,6 +6,7 @@ use App\Models\KostModel;
 use App\Models\BookingModel;
 use App\Models\PaymentModel;
 use App\Libraries\UploadFileManager;
+use App\Libraries\BookingWorkflow;
 use Throwable;
 
 class Adminkost extends BaseController
@@ -23,6 +24,7 @@ class Adminkost extends BaseController
     private PaymentModel $paymentModel;
 
     private UploadFileManager $uploadFileManager;
+    private BookingWorkflow $bookingWorkflow;
 
     // Konstruktor controller untuk inisialisasi modul dan koneksi DB
     public function __construct()
@@ -32,6 +34,7 @@ class Adminkost extends BaseController
         $this->bookingModel = new BookingModel();
         $this->paymentModel = new PaymentModel();
         $this->uploadFileManager = new UploadFileManager();
+        $this->bookingWorkflow = new BookingWorkflow();
     }
 
     // Menampilkan halaman utama dashboard owner kost
@@ -458,30 +461,20 @@ class Adminkost extends BaseController
             return redirect()->back()->with('error', 'Akses ditolak atau data pengajuan tidak ditemukan.');
         }
 
-        // Proses aksi persetujuan atau penolakan
-        if ($action === 'approve') {
-            if (! $this->performModelUpdate(
-                fn () => $this->bookingModel->update($id, ['status' => 'approved']),
-                'Booking approval failed',
-            )) {
-                return redirect()->back()->with('error', 'Pengajuan sewa gagal diperbarui.');
-            }
-            return redirect()->back()->with('success', 'Pengajuan sewa telah disetujui.');
-        } elseif ($action === 'reject') {
-            $note = (string)$this->request->getPost('rejection_note');
-            if (! $this->performModelUpdate(
-                fn () => $this->bookingModel->update($id, [
-                    'status'         => 'rejected',
-                    'rejection_note' => $note,
-                ]),
-                'Booking rejection failed',
-            )) {
-                return redirect()->back()->with('error', 'Pengajuan sewa gagal diperbarui.');
-            }
-            return redirect()->back()->with('success', 'Pengajuan sewa telah ditolak.');
+        $note = (string)$this->request->getPost('rejection_note');
+        $transition = $this->bookingWorkflow->ownerBookingAction($booking['status'], $action, $note);
+        if ($transition === null) {
+            return redirect()->back()->with('error', 'Aksi tidak valid untuk status booking saat ini.');
         }
 
-        return redirect()->back();
+        if (! $this->performModelUpdate(
+            fn () => $this->bookingModel->update($id, $transition),
+            'Booking action failed',
+        )) {
+            return redirect()->back()->with('error', 'Pengajuan sewa gagal diperbarui.');
+        }
+
+        return redirect()->back()->with('success', $action === 'approve' ? 'Pengajuan sewa telah disetujui.' : 'Pengajuan sewa telah ditolak.');
     }
 
     // Memproses pengajuan penghentian/terminasi sewa oleh penyewa
@@ -502,26 +495,21 @@ class Adminkost extends BaseController
             return redirect()->back()->with('error', 'Akses ditolak atau data pengajuan tidak ditemukan.');
         }
 
-        // Setujui atau tolak terminasi penyewaan
-        if ($action === 'approve') {
-            if (! $this->performModelUpdate(
-                fn () => $this->bookingModel->update($id, ['status' => 'terminated']),
-                'Termination approval failed',
-            )) {
-                return redirect()->back()->with('error', 'Pengajuan berhenti sewa gagal diperbarui.');
-            }
-            return redirect()->back()->with('success', 'Pengajuan berhenti sewa telah disetujui. Unit resmi dikosongkan.');
-        } elseif ($action === 'reject') {
-            if (! $this->performModelUpdate(
-                fn () => $this->bookingModel->update($id, ['status' => 'approved']),
-                'Termination rejection failed',
-            )) {
-                return redirect()->back()->with('error', 'Pengajuan berhenti sewa gagal diperbarui.');
-            }
-            return redirect()->back()->with('success', 'Pengajuan berhenti sewa ditolak. Status kembali aktif.');
+        $transition = $this->bookingWorkflow->ownerTerminationAction($booking['status'], $action);
+        if ($transition === null) {
+            return redirect()->back()->with('error', 'Aksi tidak valid untuk status pengajuan berhenti saat ini.');
         }
 
-        return redirect()->back();
+        if (! $this->performModelUpdate(
+            fn () => $this->bookingModel->update($id, $transition),
+            'Termination action failed',
+        )) {
+            return redirect()->back()->with('error', 'Pengajuan berhenti sewa gagal diperbarui.');
+        }
+
+        return redirect()->back()->with('success', $action === 'approve'
+            ? 'Pengajuan berhenti sewa telah disetujui. Unit resmi dikosongkan.'
+            : 'Pengajuan berhenti sewa ditolak. Status kembali aktif.');
     }
 
     // Melakukan verifikasi transaksi pembayaran dari penyewa

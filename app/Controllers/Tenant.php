@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\BookingModel;
 use App\Models\PaymentModel;
 use App\Libraries\UploadFileManager;
+use App\Libraries\PaymentUploadPolicy;
+use App\Libraries\BookingWorkflow;
 use Throwable;
 
 class Tenant extends BaseController
@@ -75,22 +77,7 @@ class Tenant extends BaseController
         }
 
         // Aturan validasi input formulir pembayaran
-        $rules = [
-            'booking_id'  => 'required|numeric',
-            'amount'      => 'required|numeric|greater_than[0]',
-            'proof_image' => [
-                'rules' => 'uploaded[proof_image]'
-                    . '|is_image[proof_image]'
-                    . '|mime_in[proof_image,image/jpg,image/jpeg,image/png,image/webp]'
-                    . '|max_size[proof_image,2048]',
-                'errors' => [
-                    'uploaded' => 'Harap sertakan foto resi/bukti transfer.',
-                    'is_image' => 'File bukti bayar harus berupa gambar valid.',
-                    'mime_in'  => 'Ekstensi gambar yang diizinkan: JPG, JPEG, PNG, WEBP.',
-                    'max_size' => 'Ukuran file maksimal 2MB.'
-                ]
-            ]
-        ];
+        $rules = PaymentUploadPolicy::rules();
 
         // Jalankan validasi input formulir
         if (!$this->validate($rules)) {
@@ -115,38 +102,15 @@ class Tenant extends BaseController
         }
 
         $uploadDirectory = WRITEPATH . 'uploads/payments/';
-        $fileName        = null;
-        $transactionOpen = false;
-
         try {
-            $fileName = $this->uploadFileManager->store($file, $uploadDirectory);
-
-            if (! $this->db->transBegin()) {
-                throw new \RuntimeException('Could not start the payment transaction.');
-            }
-            $transactionOpen = true;
-
-            if ($this->paymentModel->insert([
+            $this->uploadFileManager->storeWithTransaction($file, $uploadDirectory, $this->db, fn (string $fileName) => $this->paymentModel->insert([
                 'booking_id'   => $bookingId,
                 'amount'       => $amount,
                 'proof_image'  => $fileName,
                 'payment_date' => date('Y-m-d H:i:s'),
                 'status'       => 'pending',
-            ]) === false || $this->db->transStatus() === false) {
-                throw new \RuntimeException('Could not save the payment record.');
-            }
-
-            if (! $this->db->transCommit()) {
-                throw new \RuntimeException('Could not commit the payment transaction.');
-            }
-            $transactionOpen = false;
+            ]));
         } catch (Throwable $exception) {
-            if ($transactionOpen) {
-                $this->db->transRollback();
-            }
-            if ($fileName !== null) {
-                $this->uploadFileManager->deleteMany($uploadDirectory, [$fileName]);
-            }
             log_message('error', 'Payment upload failed: {message}', ['message' => $exception->getMessage()]);
 
             return redirect()->back()->withInput()->with('error', 'Pembayaran gagal disimpan. Silakan coba lagi.');
@@ -185,12 +149,13 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Pengajuan berhenti sewa hanya dapat dilakukan untuk hunian aktif.');
         }
 
-        // Perbarui status pemesanan ke pengajuan berhenti sewa
+        $transition = (new BookingWorkflow())->tenantRequestsTermination($booking['status'], $terminationReason);
+        if ($transition === null) {
+            return redirect()->back()->with('error', 'Status booking tidak mengizinkan pengajuan berhenti sewa.');
+        }
+
         try {
-            if ($this->bookingModel->update($bookingId, [
-                'status'             => 'termination_requested',
-                'termination_reason' => $terminationReason,
-            ]) === false) {
+            if ($this->bookingModel->update($bookingId, $transition) === false) {
                 throw new \RuntimeException('Could not update the booking record.');
             }
         } catch (Throwable $exception) {

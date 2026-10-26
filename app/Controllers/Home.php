@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\CampusModel;
 use App\Models\CriteriaModel;
 use App\Models\KostModel;
+use App\Libraries\SawCalculator;
 
 class Home extends BaseController
 {
@@ -103,79 +104,7 @@ class Home extends BaseController
         }
         unset($alt);
 
-        // Array penampung nilai min/max tiap kriteria untuk normalisasi
-        $minMax = [];
-
-        // Evaluasi nilai min/max untuk setiap kriteria penilaian
-        foreach ($criterias as $crit) {
-            $cId = (int)$crit['id'];
-            $cCode = $crit['code'];
-            $values = [];
-
-            // Kumpulkan nilai mentah kriteria dari seluruh alternatif kost
-            foreach ($alternatives as $alt) {
-                if ($cCode === 'C1') {
-                    $values[] = (float)$alt['price'];
-                } elseif ($cCode === 'C2') {
-                    $values[] = (float)$alt['distance'];
-                } else {
-                    $values[] = (float)($alt['feature_scores'][$cId] ?? 0.0);
-                }
-            }
-
-            // Tentukan nilai ekstrem min (untuk cost) atau max (untuk benefit)
-            if (!empty($values)) {
-                $minMax[$cId] = ($crit['type'] === 'cost') ? min($values) : max($values);
-            } else {
-                $minMax[$cId] = 0.0;
-            }
-        }
-
-        // Array penampung hasil akhir pemeringkatan
-        $finalRankings = [];
-
-        // Hitung skor normalisasi terbobot untuk tiap alternatif kost
-        foreach ($alternatives as $alt) {
-            $totalScore = 0.0;
-
-            // Kalkulasi skor per kriteria berdasarkan tipe dan bobotnya
-            foreach ($criterias as $crit) {
-                $cId = (int)$crit['id'];
-                $cCode = $crit['code'];
-                $weight = $weights[$cCode] ?? 0.0;
-
-                // Tentukan nilai atribut mentah alternatif
-                $score = ($cCode === 'C1') ? (float)$alt['price'] : (($cCode === 'C2') ? (float)$alt['distance'] : (float)($alt['feature_scores'][$cId] ?? 0.0));
-
-                // Abaikan jika pembagi minMax atau nilai mentah bernilai nol
-                if (!isset($minMax[$cId]) || $minMax[$cId] == 0.0 || $score == 0.0) {
-                    continue;
-                }
-
-                // Rumus normalisasi SAW: Cost (min/score) vs Benefit (score/max)
-                $normalized = ($crit['type'] === 'cost') ? ($minMax[$cId] / $score) : ($score / $minMax[$cId]);
-
-                // Akumulasikan skor terbobot ke skor total
-                $totalScore += $normalized * $weight;
-            }
-
-            // Susun struktur data hasil kalkulasi untuk dikirim ke view
-            $finalRankings[] = [
-                'id'          => $alt['id'],
-                'name'        => $alt['name'],
-                'price'       => $alt['price'],
-                'distance'    => round($alt['distance'], 2),
-                'final_score' => round($totalScore, 4),
-                'latitude'    => $alt['latitude'],
-                'longitude'   => $alt['longitude'],
-                'features'    => $alt['feature_names'],
-                'is_full'     => (int)($alt['is_full'] ?? 0),
-                'images'      => json_decode($alt['image'] ?? '[]', true)
-            ];
-        }
-
-        // Urutkan hasil rekomendasi dari skor tertinggi ke terendah
-        usort($finalRankings, fn(array $a, array $b): int => $b['final_score'] <=> $a['final_score']);
+        $finalRankings = (new SawCalculator())->rank($criterias, $alternatives, $weights);
 
         // Render view halaman utama membawa data hasil pemeringkatan SAW
         return view('home', [

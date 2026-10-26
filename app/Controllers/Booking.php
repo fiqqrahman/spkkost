@@ -88,39 +88,16 @@ class Booking extends BaseController
         }
 
         $uploadDirectory = WRITEPATH . 'uploads/identities/';
-        $docName         = null;
-        $transactionOpen = false;
-
         try {
-            $docName = $this->uploadFileManager->store($docFile, $uploadDirectory);
-
-            if (! $this->db->transBegin()) {
-                throw new \RuntimeException('Could not start the booking transaction.');
-            }
-            $transactionOpen = true;
-
-            if ($this->bookingModel->insert([
+            $this->uploadFileManager->storeWithTransaction($docFile, $uploadDirectory, $this->db, fn (string $docName) => $this->bookingModel->insert([
                 'user_id'        => $userId,
                 'kost_id'        => $kostId,
                 'occupant_count' => $occupants,
                 'campus_name'    => $campus,
                 'identity_doc'   => $docName,
                 'status'         => 'pending',
-            ]) === false || $this->db->transStatus() === false) {
-                throw new \RuntimeException('Could not save the booking record.');
-            }
-
-            if (! $this->db->transCommit()) {
-                throw new \RuntimeException('Could not commit the booking transaction.');
-            }
-            $transactionOpen = false;
+            ]));
         } catch (Throwable $exception) {
-            if ($transactionOpen) {
-                $this->db->transRollback();
-            }
-            if ($docName !== null) {
-                $this->uploadFileManager->deleteMany($uploadDirectory, [$docName]);
-            }
             log_message('error', 'Booking submission failed: {message}', ['message' => $exception->getMessage()]);
 
             return redirect()->back()->withInput()->with('error', 'Pengajuan booking gagal disimpan. Silakan coba lagi.');

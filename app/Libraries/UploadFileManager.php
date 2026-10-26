@@ -3,12 +3,43 @@
 namespace App\Libraries;
 
 use CodeIgniter\HTTP\Files\UploadedFile;
+use CodeIgniter\Database\BaseConnection;
 use RuntimeException;
 use Throwable;
 
 /** Keeps uploaded files and their database references in sync on failure. */
 final class UploadFileManager
 {
+    /** Store a file and persist its database reference as one recoverable operation. */
+    public function storeWithTransaction(UploadedFile $file, string $directory, BaseConnection $db, callable $persist): string
+    {
+        $fileName = $this->store($file, $directory);
+        $transactionOpen = false;
+
+        try {
+            if (! $db->transBegin()) {
+                throw new RuntimeException('Could not start the upload transaction.');
+            }
+            $transactionOpen = true;
+
+            if ($persist($fileName) === false || $db->transStatus() === false) {
+                throw new RuntimeException('Could not persist the upload reference.');
+            }
+            if (! $db->transCommit()) {
+                throw new RuntimeException('Could not commit the upload transaction.');
+            }
+            $transactionOpen = false;
+
+            return $fileName;
+        } catch (Throwable $exception) {
+            if ($transactionOpen) {
+                $db->transRollback();
+            }
+            $this->deleteMany($directory, [$fileName]);
+            throw $exception;
+        }
+    }
+
     public function store(UploadedFile $file, string $directory): string
     {
         if (! $file->isValid() || $file->hasMoved()) {

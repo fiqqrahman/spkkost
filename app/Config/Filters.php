@@ -68,7 +68,7 @@ class Filters extends BaseFilters
      * }
      */
     public array $globals = [
-        'before' => [],
+        'before' => ['csrf'],
         'after' => [
             'secureheaders',
         ],
@@ -98,7 +98,5 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [
-        'auth_satpam' => ['before' => ['owner/*', 'owner']],
-    ];
+    public array $filters = [];
 }

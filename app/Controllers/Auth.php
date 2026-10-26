@@ -21,7 +21,10 @@ class Auth extends BaseController
         // Pengalihan otomatis jika pengguna sudah memiliki session aktif
         if (session()->get('is_logged_in')) {
             $role = session()->get('role');
-            return redirect()->to(base_url($role === 'tenant' ? '/tenant/dashboard' : '/owner/dashboard'));
+            if (in_array($role, ['tenant', 'owner'], true)) {
+                return redirect()->to(base_url($role === 'tenant' ? '/tenant/dashboard' : '/owner/dashboard'));
+            }
+            session()->destroy();
         }
         return view('login');
     }
@@ -32,7 +35,10 @@ class Auth extends BaseController
         // Pengalihan otomatis jika pengguna sudah memiliki session aktif
         if (session()->get('is_logged_in')) {
             $role = session()->get('role');
-            return redirect()->to(base_url($role === 'tenant' ? '/tenant/dashboard' : '/owner/dashboard'));
+            if (in_array($role, ['tenant', 'owner'], true)) {
+                return redirect()->to(base_url($role === 'tenant' ? '/tenant/dashboard' : '/owner/dashboard'));
+            }
+            session()->destroy();
         }
         return view('register');
     }
@@ -80,8 +86,12 @@ class Auth extends BaseController
         if ($user && password_verify((string)$password, (string)$user['password'])) {
             session()->regenerate();
 
-            // Tentukan role pengguna dari record database
-            $userRole = $user['role'] ?? 'owner';
+            // Role harus eksplisit dan dikenal; jangan memberi hak owner secara default.
+            $userRole = $user['role'] ?? null;
+            if (!in_array($userRole, ['tenant', 'owner'], true)) {
+                session()->destroy();
+                return redirect()->back()->with('error', 'Akun tidak memiliki role yang valid. Hubungi administrator.');
+            }
 
             session()->set([
                 'user_id'      => (int)$user['id'],

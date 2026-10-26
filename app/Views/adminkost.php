@@ -51,9 +51,12 @@ $incomingBookings = $incomingBookings ?? [];
                 <a href="<?= base_url('/') ?>" class="text-xs font-semibold text-slate-700 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 px-3.5 py-2 rounded-lg transition">
                     Beranda
                 </a>
-                <a href="<?= base_url('/logout') ?>" class="text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3.5 py-2 rounded-lg transition">
-                    Keluar
-                </a>
+                <form method="POST" action="<?= base_url('/logout') ?>">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3.5 py-2 rounded-lg transition">
+                        Keluar
+                    </button>
+                </form>
             </div>
         </div>
     </header>
@@ -229,15 +232,18 @@ $incomingBookings = $incomingBookings ?? [];
                                             class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-xs cursor-pointer">
                                             Edit
                                         </button>
-                                        <a href="<?= base_url('/owner/toggle-status/' . $kost['id']) ?>"
-                                            class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs <?= (isset($kost['is_full']) && $kost['is_full'] == 1) ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white' ?>">
-                                            <?= (isset($kost['is_full']) && $kost['is_full'] == 1) ? 'Buka Kamar' : 'Set Jadi Penuh' ?>
-                                        </a>
-                                        <a href="<?= base_url('/owner/delete/' . $kost['id']) ?>"
-                                            onclick="return confirm('Tindakan ini akan menghapus properti kost secara permanen. Apakah antum yakin ingin melanjutkan?');"
-                                            class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition shadow-xs">
-                                            Hapus
-                                        </a>
+                                        <form method="POST" action="<?= base_url('/owner/toggle-status/' . $kost['id']) ?>" class="inline-block">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs <?= (isset($kost['is_full']) && $kost['is_full'] == 1) ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white' ?>">
+                                                <?= (isset($kost['is_full']) && $kost['is_full'] == 1) ? 'Buka Kamar' : 'Set Jadi Penuh' ?>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="<?= base_url('/owner/delete/' . $kost['id']) ?>" class="inline-block" onsubmit="return confirm('Tindakan ini akan menghapus properti kost secara permanen. Apakah antum yakin ingin melanjutkan?');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition shadow-xs">
+                                                Hapus
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -282,21 +288,24 @@ $incomingBookings = $incomingBookings ?? [];
                                     </a>
 
                                     <?php if ($b['status'] === 'pending'): ?>
-                                        <a href="<?= base_url('/owner/booking/handle/' . $b['id'] . '/approve') ?>" class="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition">
-                                            Setujui
-                                        </a>
+                                        <form method="POST" action="<?= base_url('/owner/booking/handle/' . $b['id'] . '/approve') ?>" class="inline-block">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition">Setujui</button>
+                                        </form>
                                         <button type="button" onclick="openRejectModal(<?= $b['id'] ?>)" class="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition cursor-pointer">
                                             Tolak
                                         </button>
                                     <?php elseif ($b['status'] === 'approved'): ?>
                                         <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Disetujui / Aktif</span>
                                     <?php elseif ($b['status'] === 'termination_requested'): ?>
-                                        <a href="<?= base_url('/owner/booking/termination/' . $b['id'] . '/approve') ?>" onclick="return confirm('Apakah Antum yakin ingin menyetujui pengajuan berhenti sewa ini?')" class="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition">
-                                            Setujui Berhenti
-                                        </a>
-                                        <a href="<?= base_url('/owner/booking/termination/' . $b['id'] . '/reject') ?>" class="text-xs font-semibold text-white bg-slate-600 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition">
-                                            Tolak Berhenti
-                                        </a>
+                                        <form method="POST" action="<?= base_url('/owner/booking/termination/' . $b['id'] . '/approve') ?>" class="inline-block" onsubmit="return confirm('Apakah Antum yakin ingin menyetujui pengajuan berhenti sewa ini?')">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition">Setujui Berhenti</button>
+                                        </form>
+                                        <form method="POST" action="<?= base_url('/owner/booking/termination/' . $b['id'] . '/reject') ?>" class="inline-block">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="text-xs font-semibold text-white bg-slate-600 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition">Tolak Berhenti</button>
+                                        </form>
                                     <?php elseif ($b['status'] === 'terminated'): ?>
                                         <span class="bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1 rounded-full text-xs font-bold">Sewa Selesai</span>
                                     <?php else: ?>
@@ -346,8 +355,14 @@ $incomingBookings = $incomingBookings ?? [];
                                                         </td>
                                                         <td class="px-4 py-2 text-center space-x-1">
                                                             <?php if ($p['status'] === 'pending'): ?>
-                                                                <a href="<?= base_url('/owner/payment/handle/' . $p['id'] . '/verify') ?>" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-emerald-700 transition">Sahkan</a>
-                                                                <a href="<?= base_url('/owner/payment/handle/' . $p['id'] . '/reject') ?>" class="bg-rose-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-rose-700 transition">Tolak</a>
+                                                                <form method="POST" action="<?= base_url('/owner/payment/handle/' . $p['id'] . '/verify') ?>" class="inline-block">
+                                                                    <?= csrf_field() ?>
+                                                                    <button type="submit" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-emerald-700 transition">Sahkan</button>
+                                                                </form>
+                                                                <form method="POST" action="<?= base_url('/owner/payment/handle/' . $p['id'] . '/reject') ?>" class="inline-block">
+                                                                    <?= csrf_field() ?>
+                                                                    <button type="submit" class="bg-rose-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-rose-700 transition">Tolak</button>
+                                                                </form>
                                                             <?php else: ?>
                                                                 <span class="text-slate-400 font-italic text-[10px]">Selesai</span>
                                                             <?php endif; ?>

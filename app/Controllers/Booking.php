@@ -47,7 +47,7 @@ class Booking extends BaseController
         $documentRules = $isPdf
             ? 'uploaded[identity_doc]|ext_in[identity_doc,pdf]|mime_in[identity_doc,application/pdf]|max_size[identity_doc,2048]'
             : 'uploaded[identity_doc]|ext_in[identity_doc,jpg,jpeg,png,webp]|is_image[identity_doc]'
-                . '|mime_in[identity_doc,image/jpg,image/jpeg,image/png,image/webp]|max_size[identity_doc,2048]';
+            . '|mime_in[identity_doc,image/jpg,image/jpeg,image/png,image/webp]|max_size[identity_doc,2048]';
 
         // Aturan validasi input formulir booking
         $rules = [
@@ -89,7 +89,7 @@ class Booking extends BaseController
 
         $uploadDirectory = WRITEPATH . 'uploads/identities/';
         try {
-            $this->uploadFileManager->storeWithTransaction($docFile, $uploadDirectory, $this->db, fn (string $docName) => $this->bookingModel->insert([
+            $this->uploadFileManager->storeWithTransaction($docFile, $uploadDirectory, $this->db, fn(string $docName) => $this->bookingModel->insert([
                 'user_id'        => $userId,
                 'kost_id'        => $kostId,
                 'occupant_count' => $occupants,
@@ -104,6 +104,6 @@ class Booking extends BaseController
         }
 
         // Redirect kembali ke dashboard tenant membawa pesan sukses
-        return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Pengajuan booking sewa berhasil dikirimkan! Silakan pantau status pengajuan antum di Dashboard Tenant.');
+        return redirect()->to(base_url('/tenant/dashboard'))->with('success', 'Pengajuan booking sewa berhasil dikirimkan! Silakan pantau status pengajuan di Dashboard Tenant.');
     }
 }

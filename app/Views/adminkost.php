@@ -238,7 +238,7 @@ $incomingBookings = $incomingBookings ?? [];
                                                 <?= (isset($kost['is_full']) && $kost['is_full'] == 1) ? 'Buka Kamar' : 'Set Jadi Penuh' ?>
                                             </button>
                                         </form>
-                                        <form method="POST" action="<?= base_url('/owner/delete/' . $kost['id']) ?>" class="inline-block" onsubmit="return confirm('Tindakan ini akan menghapus properti kost secara permanen. Apakah antum yakin ingin melanjutkan?');">
+                                        <form method="POST" action="<?= base_url('/owner/delete/' . $kost['id']) ?>" class="inline-block" onsubmit="return confirm('Tindakan ini akan menghapus properti kost secara permanen. Apakah anda yakin ingin melanjutkan?');">
                                             <?= csrf_field() ?>
                                             <button type="submit" class="inline-block text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition shadow-xs">
                                                 Hapus
@@ -298,7 +298,7 @@ $incomingBookings = $incomingBookings ?? [];
                                     <?php elseif ($b['status'] === 'approved'): ?>
                                         <span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold">Disetujui / Aktif</span>
                                     <?php elseif ($b['status'] === 'termination_requested'): ?>
-                                        <form method="POST" action="<?= base_url('/owner/booking/termination/' . $b['id'] . '/approve') ?>" class="inline-block" onsubmit="return confirm('Apakah Antum yakin ingin menyetujui pengajuan berhenti sewa ini?')">
+                                        <form method="POST" action="<?= base_url('/owner/booking/termination/' . $b['id'] . '/approve') ?>" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menyetujui pengajuan berhenti sewa ini?')">
                                             <?= csrf_field() ?>
                                             <button type="submit" class="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition">Setujui Berhenti</button>
                                         </form>
@@ -395,7 +395,7 @@ $incomingBookings = $incomingBookings ?? [];
                         <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
                         Edit Informasi Properti Kost
                     </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Perbarui rincian, fasilitas, dan titik koordinat kost antum</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Perbarui rincian, fasilitas, dan titik koordinat kost anda</p>
                 </div>
                 <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2 py-1 cursor-pointer">&times;</button>
             </div>

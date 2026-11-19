@@ -53,7 +53,7 @@
             <div class="md:col-span-7 p-8 sm:p-10 flex flex-col justify-center space-y-5 bg-white">
                 <div class="space-y-1">
                     <h2 class="text-xl font-bold text-slate-900 tracking-tight">Formulir Pendaftaran</h2>
-                    <p class="text-slate-500 text-xs">Lengkapi kredensial akun pencari kost antum.</p>
+                    <p class="text-slate-500 text-xs">Lengkapi kredensial akun pencari kost anda.</p>
                 </div>
 
                 <?php if (session()->getFlashdata('error')): ?>

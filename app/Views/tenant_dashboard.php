@@ -181,7 +181,7 @@
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="text-center py-12 text-slate-400 italic">
-                        Antum belum memiliki riwayat pengajuan sewa kost. Silakan cari kost di beranda utama!
+                        Anda belum memiliki riwayat pengajuan sewa kost. Silakan cari kost di beranda utama!
                     </div>
                 <?php endif; ?>
             </div>

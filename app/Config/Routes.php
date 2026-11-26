@@ -17,6 +17,8 @@ $routes->post('logout', 'Auth::logout');
 
 $routes->get('register', 'Auth::register');
 $routes->post('auth/register', 'Auth::attemptRegister');
+$routes->get('register/owner', 'Auth::register/owner');
+$routes->post('auth/register/owner', 'Auth::attemptOwnerRegister');
 
 // ==========================================
 // 2. TENANT (PENYEWA) ROUTES

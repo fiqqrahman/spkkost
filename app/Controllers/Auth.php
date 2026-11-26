@@ -30,7 +30,7 @@ class Auth extends BaseController
     }
 
     // Menampilkan halaman formulir registrasi akun baru
-    public function register(): \CodeIgniter\HTTP\RedirectResponse|string
+    public function register(string $role = 'tenant'): \CodeIgniter\HTTP\RedirectResponse|string
     {
         // Pengalihan otomatis jika pengguna sudah memiliki session aktif
         if (session()->get('is_logged_in')) {
@@ -40,16 +40,29 @@ class Auth extends BaseController
             }
             session()->destroy();
         }
-        return view('register');
+        if (!in_array($role, ['tenant', 'owner'], true)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        return view('register', ['registrationRole' => $role]);
     }
 
     // Memproses registrasi akun baru pencari kost (Tenant)
     public function attemptRegister(): \CodeIgniter\HTTP\RedirectResponse
     {
+        return $this->createAccount('tenant');
+    }
+
+    public function attemptOwnerRegister(): \CodeIgniter\HTTP\RedirectResponse
+    {
+        return $this->createAccount('owner');
+    }
+
+    private function createAccount(string $role): \CodeIgniter\HTTP\RedirectResponse
+    {
         // Aturan validasi pendaftaran akun
         $rules = [
-            'username' => 'required|min_length[3]|max_length[50]',
-            'email'    => 'required|valid_email|is_unique[users.email]',
+            'username' => 'required|min_length[3]|max_length[100]|is_unique[users.username]',
+            'email'    => 'required|valid_email|max_length[150]|is_unique[users.email]',
             'password' => 'required|min_length[6]'
         ];
 
@@ -63,13 +76,14 @@ class Auth extends BaseController
             'username' => $this->request->getPost('username'),
             'email'    => $this->request->getPost('email'),
             'password' => password_hash((string)$this->request->getPost('password'), PASSWORD_BCRYPT),
-            'role'     => 'tenant'
+            'role'     => $role
         ];
 
         // Simpan data pengguna baru ke database
         $this->userModel->insert($userData);
 
-        return redirect()->to(base_url('/login'))->with('success', 'Pendaftaran akun pencari kost berhasil. Silakan login!');
+        $accountType = $role === 'owner' ? 'pemilik kost' : 'pencari kost';
+        return redirect()->to(base_url('/login'))->with('success', "Pendaftaran akun {$accountType} berhasil. Silakan login!");
     }
 
     // Memproses otentikasi login pengguna

@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Akun Pencari Kost</title>
+    <?php $isOwnerRegistration = ($registrationRole ?? 'tenant') === 'owner'; ?>
+    <title>Daftar Akun <?= $isOwnerRegistration ? 'Pemilik Kost' : 'Pencari Kost' ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,13 +36,13 @@
 
                 <div class="relative z-10 my-8 space-y-3">
                     <span class="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 text-[10px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        Registrasi Penyewa
+                        Registrasi <?= $isOwnerRegistration ? 'Pemilik Kost' : 'Penyewa' ?>
                     </span>
                     <h1 class="text-xl font-extrabold tracking-tight leading-snug">
-                        BUAT AKUN PENCARI KOST
+                        BUAT AKUN <?= $isOwnerRegistration ? 'PEMILIK KOST' : 'PENCARI KOST' ?>
                     </h1>
                     <p class="text-indigo-100/80 text-xs leading-relaxed font-normal">
-                        Registrasi terlebih dahulu untuk bisa mengajukan sewa kost dan melakukan verifikasi pembayaran bulanan.
+                        <?= $isOwnerRegistration ? 'Daftarkan akun pemilik untuk mengelola properti kost dan meninjau pengajuan sewa.' : 'Registrasi terlebih dahulu untuk bisa mengajukan sewa kost dan melakukan verifikasi pembayaran bulanan.' ?>
                     </p>
                 </div>
 
@@ -53,7 +54,7 @@
             <div class="md:col-span-7 p-8 sm:p-10 flex flex-col justify-center space-y-5 bg-white">
                 <div class="space-y-1">
                     <h2 class="text-xl font-bold text-slate-900 tracking-tight">Formulir Pendaftaran</h2>
-                    <p class="text-slate-500 text-xs">Lengkapi kredensial akun pencari kost anda.</p>
+                    <p class="text-slate-500 text-xs">Lengkapi data akun <?= $isOwnerRegistration ? 'pemilik kost' : 'pencari kost' ?> Anda.</p>
                 </div>
 
                 <?php if (session()->getFlashdata('error')): ?>
@@ -62,17 +63,17 @@
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" action="<?= base_url('/auth/register') ?>" class="space-y-4">
+                <form method="POST" action="<?= base_url($isOwnerRegistration ? '/auth/register/owner' : '/auth/register') ?>" class="space-y-4">
                     <?= csrf_field() ?>
                     <div>
                         <label for="username" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Nama Lengkap / Username</label>
-                        <input type="text" id="username" name="username" value="<?= old('username') ?>" required placeholder="Contoh: Ahmad Subagja"
+                        <input type="text" id="username" name="username" value="<?= esc(old('username')) ?>" required placeholder="Contoh: Ahmad Subagja"
                             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
                     </div>
 
                     <div>
                         <label for="email" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">Email Active</label>
-                        <input type="email" id="email" name="email" value="<?= old('email') ?>" required placeholder="pencari@gmail.com"
+                        <input type="email" id="email" name="email" value="<?= esc(old('email')) ?>" required placeholder="email@domain.com"
                             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 focus:bg-white transition">
                     </div>
 
@@ -91,6 +92,10 @@
                     <p class="text-xs text-slate-500">
                         Sudah punya akun?
                         <a href="<?= base_url('/login') ?>" class="text-indigo-600 hover:underline font-bold">Masuk di sini</a>
+                    </p>
+                    <p class="text-xs text-slate-500">
+                        <?= $isOwnerRegistration ? 'Ingin mencari kost?' : 'Ingin mendaftarkan kost?' ?>
+                        <a href="<?= base_url($isOwnerRegistration ? '/register' : '/register/owner') ?>" class="text-indigo-600 hover:underline font-bold"><?= $isOwnerRegistration ? 'Daftar sebagai penyewa' : 'Daftar sebagai pemilik' ?></a>
                     </p>
                 </div>
             </div>

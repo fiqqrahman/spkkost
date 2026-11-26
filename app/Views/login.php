@@ -92,6 +92,10 @@
                         Belum punya akun pencari kost?
                         <a href="<?= base_url('/register') ?>" class="text-indigo-600 hover:underline font-bold">Daftar Akun Baru</a>
                     </p>
+                    <p class="text-xs text-slate-500">
+                        Pemilik kost?
+                        <a href="<?= base_url('/register/owner') ?>" class="text-indigo-600 hover:underline font-bold">Daftar sebagai pemilik</a>
+                    </p>
                     <div>
                         <a href="<?= base_url('/') ?>" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition">
                             ← Kembali ke Beranda Utama

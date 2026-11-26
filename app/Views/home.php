@@ -284,6 +284,14 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
         </div>
     </div>
 
+    <div id="photoPreviewModal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/90 p-4" role="dialog" aria-modal="true" aria-label="Preview foto kost" onclick="if (event.target === this) closePhotoPreview()">
+        <button type="button" onclick="closePhotoPreview()" class="absolute top-4 right-4 z-10 rounded-full bg-white/10 px-4 py-2 text-3xl leading-none text-white hover:bg-white/20" aria-label="Tutup preview">&times;</button>
+        <figure class="flex max-h-full max-w-full flex-col items-center gap-3">
+            <img id="photoPreviewImage" src="" alt="" class="max-h-[82vh] max-w-[94vw] rounded-xl object-contain shadow-2xl">
+            <figcaption id="photoPreviewCaption" class="text-center text-sm font-medium text-white"></figcaption>
+        </figure>
+    </div>
+
     <footer class="bg-white border-t border-slate-200 py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
             &copy; <?= date('Y') ?> SPK Rekomendasi Kost Palangka Raya. All rights reserved.
@@ -291,8 +299,34 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
     </footer>
 
     <script>
-        const campusInfo = <?= json_encode($currentCampus) ?>;
-        const kostLocations = <?= json_encode($results) ?>;
+        const campusInfo = <?= json_encode($currentCampus, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+        const kostLocations = <?= json_encode($results, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+
+        function closePhotoPreview() {
+            const modal = document.getElementById('photoPreviewModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('photoPreviewImage').src = '';
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        function openPhotoPreview(src, caption) {
+            const modal = document.getElementById('photoPreviewModal');
+            const image = document.getElementById('photoPreviewImage');
+            image.src = src;
+            image.alt = caption;
+            document.getElementById('photoPreviewCaption').textContent = caption;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            modal.querySelector('button').focus();
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && !document.getElementById('photoPreviewModal').classList.contains('hidden')) {
+                closePhotoPreview();
+            }
+        });
 
         if (campusInfo && campusInfo.latitude && campusInfo.longitude) {
             // Inisialisasi Peta berdasarkan Koordinat Kampus
@@ -311,11 +345,18 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                 iconAnchor: [16, 16]
             });
 
+            const campusPopup = document.createElement('div');
+            campusPopup.className = 'text-slate-900 p-1';
+            const campusName = document.createElement('b');
+            campusName.className = 'text-xs block uppercase text-rose-600';
+            campusName.textContent = campusInfo.name || 'Kampus';
+            campusPopup.appendChild(campusName);
+
             L.marker([parseFloat(campusInfo.latitude), parseFloat(campusInfo.longitude)], {
                     icon: campusCustomIcon
                 })
                 .addTo(map)
-                .bindPopup(`<div class="text-slate-900 p-1"><b class="text-xs block uppercase text-rose-600">${campusInfo.name}</b></div>`)
+                .bindPopup(campusPopup)
                 .openPopup();
 
             // Plotting Marker Kost
@@ -352,26 +393,48 @@ $selectedLifestyle = $selectedLifestyle ?? $lifestyle ?? 'default';
                             }
                         }
 
-                        let popupGalleryHtml = '';
-                        if (Array.isArray(photoList) && photoList.length > 0) {
-                            popupGalleryHtml = '<div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:8px; max-height:120px; overflow-y:auto;">';
-                            photoList.forEach(function(img) {
-                                if (img) {
-                                    popupGalleryHtml += `<img src="${baseUrlUploads + img}" style="width:100%; height:55px; object-fit:cover; border-radius:4px; border:1px solid #e2e8f0;" alt="${kost.name}">`;
-                                }
+                        const popupContent = document.createElement('div');
+                        popupContent.className = 'text-slate-800 text-xs';
+                        popupContent.style.minWidth = '180px';
+                        popupContent.style.maxWidth = '220px';
+
+                        const safePhotoNames = Array.isArray(photoList) ? photoList.filter(function(img) {
+                            return typeof img === 'string' && /^[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(img);
+                        }).slice(0, 5) : [];
+
+                        if (safePhotoNames.length > 0) {
+                            const gallery = document.createElement('div');
+                            gallery.className = 'mb-2 grid grid-cols-2 gap-1.5';
+                            safePhotoNames.forEach(function(img, photoIndex) {
+                                const photoUrl = new URL(encodeURIComponent(img), baseUrlUploads).toString();
+                                const photoButton = document.createElement('button');
+                                photoButton.type = 'button';
+                                photoButton.className = 'block cursor-zoom-in overflow-hidden rounded border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                                photoButton.setAttribute('aria-label', 'Perbesar foto ' + (photoIndex + 1) + ' ' + (kost.name || 'kost'));
+                                const thumbnail = document.createElement('img');
+                                thumbnail.src = photoUrl;
+                                thumbnail.alt = 'Foto ' + (photoIndex + 1) + ' ' + (kost.name || 'kost');
+                                thumbnail.loading = 'lazy';
+                                thumbnail.className = 'h-14 w-full object-cover';
+                                photoButton.appendChild(thumbnail);
+                                photoButton.addEventListener('click', function() {
+                                    openPhotoPreview(photoUrl, (kost.name || 'Foto kost') + ' · ' + (photoIndex + 1) + '/' + safePhotoNames.length);
+                                });
+                                gallery.appendChild(photoButton);
                             });
-                            popupGalleryHtml += '</div>';
+                            popupContent.appendChild(gallery);
                         }
 
-                        const popupContent = `
-                            <div class="text-slate-800 text-xs" style="min-width:180px; max-width:200px;">
-                                ${popupGalleryHtml}
-                                <b class="text-sm block text-indigo-700 border-b border-slate-200 pb-1 mb-1">${kost.name}</b>
-                                <div style="margin-bottom:3px;"><b>Rank</b>: <span style="background:#e0e7ff; color:#3730a3; font-weight:bold; padding:1px 5px; border-radius:3px;">#${index + 1}</span></div>
-                                <b>Jarak</b>: <span class="text-slate-900 font-bold">${kost.distance} Km</span><br>
-                                <b>Skor</b>: <span class="text-indigo-600 font-bold">${kost.final_score}</span>
-                            </div>
-                        `;
+                        const title = document.createElement('b');
+                        title.className = 'mb-1 block border-b border-slate-200 pb-1 text-sm text-indigo-700';
+                        title.textContent = kost.name || 'Kost';
+                        popupContent.appendChild(title);
+
+                        const details = document.createElement('div');
+                        details.className = 'text-slate-800';
+                        details.textContent = 'Rank #' + (index + 1) + ' · Jarak ' + kost.distance + ' Km · Skor ' + kost.final_score;
+                        popupContent.appendChild(details);
+
                         marker.bindPopup(popupContent);
                     }
                 });

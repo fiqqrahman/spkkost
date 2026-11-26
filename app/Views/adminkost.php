@@ -283,8 +283,11 @@ $incomingBookings = $incomingBookings ?? [];
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <a href="<?= base_url('owner/files/booking/' . (int)$b['id'] . '/identity') ?>" class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">
-                                        Lihat KTP/KTM
+                                    <a href="<?= base_url('owner/files/booking/' . (int)$b['id'] . '/identity/preview') ?>" target="_blank" rel="noopener" class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">
+                                        Lihat
+                                    </a>
+                                    <a href="<?= base_url('owner/files/booking/' . (int)$b['id'] . '/identity') ?>" class="text-xs font-semibold text-slate-700 bg-white border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition">
+                                        Download
                                     </a>
 
                                     <?php if ($b['status'] === 'pending'): ?>

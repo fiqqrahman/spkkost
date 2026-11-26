@@ -40,6 +40,7 @@ $routes->group('owner', ['filter' => 'auth_satpam:owner'], static function (Rout
     $routes->get('/', 'Adminkost::index');
     $routes->get('dashboard', 'Adminkost::index');
     $routes->get('files/booking/(:num)/identity', 'PrivateFiles::ownerIdentity/$1');
+    $routes->get('files/booking/(:num)/identity/preview', 'PrivateFiles::ownerIdentityPreview/$1');
     $routes->get('files/payment/(:num)', 'PrivateFiles::ownerPayment/$1');
 
     // Pengurusan Properti Kost
